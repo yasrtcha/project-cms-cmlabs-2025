@@ -8,7 +8,7 @@ import {
   OrganizationList
 } from "@/app/dashboard/components"
 
-export default function HomePage() {
+export default function DashboardPage() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
