@@ -8,6 +8,7 @@ export { StatsCards } from "./stats-cards"
 // Chart components
 export { DeadlinesChart } from "./deadlines-chart"
 export { ActivityChart } from "./activity-chart"
+export { ChartsWrapper } from "./charts-wrapper"
 
 // Table components
 export { ActivitiesTable } from "./activities-table"

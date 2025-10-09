@@ -27,9 +27,9 @@ const chartConfig = {
 
 export function DeadlinesChart() {
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Deadlines</CardTitle>
+        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Deadlines</CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer
@@ -58,17 +58,17 @@ export function DeadlinesChart() {
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: config.color }}
               />
-              <span className="text-sm text-gray-600">{config.label}</span>
+              <span className="text-sm text-gray-900 dark:text-slate-200">{config.label}</span>
             </div>
           ))}
         </div>
         
         {/* Percentage labels */}
         <div className="text-center mt-4">
-          <div className="text-2xl font-bold text-gray-900">100%</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">100%</div>
           <div className="flex justify-around mt-2 text-sm">
-            <span className="text-amber-600">30%</span>
-            <span className="text-red-600">45%</span>
+            <span className="text-amber-600 dark:text-amber-500">30%</span>
+            <span className="text-red-600 dark:text-red-500">45%</span>
           </div>
         </div>
       </CardContent>

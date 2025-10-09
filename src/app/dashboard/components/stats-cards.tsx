@@ -10,12 +10,12 @@ function StatsCard({ title, value, className }: StatsCardProps) {
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-2xl font-medium text-black">
+        <CardTitle className="text-sm font-medium text-gray-700 dark:text-slate-300">
           {title}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold text-black">{value}</div>
+        <div className="text-3xl font-bold text-gray-900 dark:text-white">{value}</div>
       </CardContent>
     </Card>
   )
@@ -48,7 +48,7 @@ export function StatsCards() {
           key={index}
           title={stat.title}
           value={stat.value}
-          className="bg-white"
+          className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all"
         />
       ))}
     </div>

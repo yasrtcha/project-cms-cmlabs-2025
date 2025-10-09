@@ -50,10 +50,10 @@ const chartConfig = {
 
 export function ActivityChart() {
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-semibold">Activity Chart</CardTitle>
-        <Button variant="outline" size="sm" className="bg-blue-600 text-white hover:bg-white hover:text-blue-600">
+        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Activity Chart</CardTitle>
+        <Button variant="outline" size="sm" className="bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 border-0">
           All Project
           <ChevronDown className="h-4 w-4 ml-1" />
         </Button>
@@ -65,12 +65,12 @@ export function ActivityChart() {
               dataKey="name" 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: '#6b7280' }}
+              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
             />
             <YAxis 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: '#6b7280' }}
+              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               domain={[0, 100]}
             />
             <ChartTooltip content={<ChartTooltipContent />} />
@@ -88,7 +88,7 @@ export function ActivityChart() {
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: config.color }}
               />
-              <span className="text-sm text-gray-600">{config.label}</span>
+              <span className="text-sm text-gray-900 dark:text-slate-200">{config.label}</span>
             </div>
           ))}
         </div>

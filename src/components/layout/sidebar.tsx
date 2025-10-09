@@ -7,25 +7,25 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Menu, X } from "lucide-react"
-import { useState } from "react"
+import { useState, memo } from "react"
 import { MENU_ITEMS } from "@/constants/dashboard"
 
 interface SidebarProps {
   className?: string
 }
 
-export function Sidebar({ className }: SidebarProps) {
+function SidebarComponent({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const pathname = usePathname()
 
   return (
     <div className={cn(
-      "flex flex-col h-screen bg-white border-r border-gray-200 transition-all duration-300",
+      "flex flex-col h-screen bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 transition-all duration-300",
       isCollapsed ? "w-16" : "w-64",
       className
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
         {!isCollapsed && (
           <div className="flex items-center space-x-2">
             <Image
@@ -35,7 +35,7 @@ export function Sidebar({ className }: SidebarProps) {
               height={24}
               className="rounded"
             />
-            <span className="font-semibold text-gray-900">CMS WeldFine</span>
+            <span className="font-semibold text-gray-900 dark:text-white">CMS WeldFine</span>
           </div>
         )}
         <Button
@@ -57,10 +57,10 @@ export function Sidebar({ className }: SidebarProps) {
               <Button
                 variant={isActive ? "default" : "ghost"}
                 className={cn(
-                  "w-full justify-start text-left",
+                  "w-full justify-start text-left transition-colors",
                   isActive 
-                    ? "bg-blue-600 text-white hover:bg-blue-700" 
-                    : "text-gray-700 hover:bg-gray-100",
+                    ? "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600" 
+                    : "text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800",
                   isCollapsed && "justify-center px-2"
                 )}
               >
@@ -83,3 +83,6 @@ export function Sidebar({ className }: SidebarProps) {
     </div>
   )
 }
+
+// Memoize to prevent unnecessary re-renders
+export const Sidebar = memo(SidebarComponent)
