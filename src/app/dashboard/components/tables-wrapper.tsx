@@ -1,10 +1,8 @@
 "use client"
 
 import dynamic from 'next/dynamic'
-
-// Lazy load chart components on client-side only
-const DeadlinesChart = dynamic(
-  () => import("./deadlines-chart").then(mod => ({ default: mod.DeadlinesChart })),
+const ActivitiesTable = dynamic(
+  () => import("./activities-table").then(mod => ({ default: mod.ActivitiesTable })),
   {
     loading: () => (
       <div className="h-[400px] bg-white dark:bg-slate-800 rounded-lg animate-pulse border border-slate-200 dark:border-slate-700" />
@@ -12,9 +10,8 @@ const DeadlinesChart = dynamic(
     ssr: false
   }
 )
-
-const ActivityChart = dynamic(
-  () => import("./activity-chart").then(mod => ({ default: mod.ActivityChart })),
+const OrganizationList = dynamic(
+  () => import("./organization-list").then(mod => ({ default: mod.OrganizationList })),
   {
     loading: () => (
       <div className="h-[400px] bg-white dark:bg-slate-800 rounded-lg animate-pulse border border-slate-200 dark:border-slate-700" />
@@ -22,12 +19,11 @@ const ActivityChart = dynamic(
     ssr: false
   }
 )
-
-export function ChartsWrapper() {
+export function TablesWrapper() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <DeadlinesChart />
-      <ActivityChart />
+    <div className="space-y-6">
+      <ActivitiesTable />
+      <OrganizationList />
     </div>
   )
 }

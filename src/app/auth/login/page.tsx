@@ -131,13 +131,13 @@ export default function LoginPage() {
           </div>
 
           {/* Login Button */}
-          <Button
+          <button
             type="submit"
-            className="auth-button-primary"
+            className="w-full bg-[#0D5EBA] hover:bg-[#0A4A94] dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isLoading}
           >
             {isLoading ? "Loading..." : "Login"}
-          </Button>
+          </button>
 
           {/* Divider */}
           <div className="relative">
@@ -145,7 +145,7 @@ export default function LoginPage() {
               <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white dark:bg-gray-900 px-4 text-gray-500 dark:text-gray-400">or</span>
+              <span className="px-4 text-blue-600 dark:text-blue-400">or</span>
             </div>
           </div>
 

@@ -3,8 +3,7 @@ import {
   Header,
   StatsCards,
   ChartsWrapper,
-  ActivitiesTable,
-  OrganizationList
+  TablesWrapper
 } from "@/app/dashboard/components"
 
 export default function DashboardPage() {
@@ -26,11 +25,8 @@ export default function DashboardPage() {
           {/* Charts Row - Lazy loaded on client */}
           <ChartsWrapper />
           
-          {/* Tables Row */}
-          <div className="space-y-6">
-            <ActivitiesTable />
-            <OrganizationList />
-          </div>
+          {/* Tables Row - Lazy loaded on client */}
+          <TablesWrapper />
         </main>
       </div>
     </div>

@@ -10,6 +10,7 @@ export { DeadlinesChart } from "./deadlines-chart"
 export { ActivityChart } from "./activity-chart"
 export { ChartsWrapper } from "./charts-wrapper"
 
-// Table components
+// Table components (lazy loaded via wrapper)
 export { ActivitiesTable } from "./activities-table"
 export { OrganizationList } from "./organization-list"
+export { TablesWrapper } from "./tables-wrapper"

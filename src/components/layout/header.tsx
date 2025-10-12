@@ -5,9 +5,7 @@ import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MdOutlineDarkMode, MdOutlineLightMode, MdOutlineCallToAction } from "react-icons/md"
-import { IoFilter } from "react-icons/io5"
-import { User, Settings, LogOut, ChevronDown } from "lucide-react"
+import { Moon, Sun, Zap, Filter, User, Settings, LogOut, ChevronDown } from "lucide-react"
 import { useTheme } from "@/contexts/theme-context"
 
 function HeaderComponent() {
@@ -62,13 +60,13 @@ function HeaderComponent() {
       {/* Right side - Actions and user profile */}
       <div className="flex items-center space-x-4">
         {/* Action buttons */}
-        <Button variant="outline" size="sm" className="flex items-center space-x-2 text-gray-600">
-          <IoFilter className="h-4 w-4" />
+        <Button variant="outline" size="sm" className="flex items-center space-x-2 text-black dark:text-gray-300">
+          <Filter className="h-4 w-4" />
           <span>Filter</span>
         </Button>
 
-        <Button variant="outline" size="sm" className="flex items-center space-x-2 text-gray-600">
-          <MdOutlineCallToAction className="h-4 w-4" />
+        <Button variant="outline" size="sm" className="flex items-center space-x-2 text-black dark:text-gray-300">
+          <Zap className="h-4 w-4" />
           <span>Quick Action</span>
         </Button>
 
@@ -79,9 +77,9 @@ function HeaderComponent() {
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-300"
         >
           {isMounted && theme === "dark" ? (
-            <><MdOutlineLightMode className="h-4 w-4" /><span>Light Mode</span></>
+            <><Sun className="h-4 w-4" /><span>Light Mode</span></>
           ) : (
-            <><MdOutlineDarkMode className="h-4 w-4" /><span>Dark Mode</span></>
+            <><Moon className="h-4 w-4" /><span>Dark Mode</span></>
           )}
         </Button>
 

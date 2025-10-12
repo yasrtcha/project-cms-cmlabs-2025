@@ -17,8 +17,16 @@ const nextConfig: NextConfig = {
   
   // Experimental features for better performance
   experimental: {
-    optimizePackageImports: ['lucide-react', 'recharts'],
+    optimizePackageImports: ['lucide-react', 'recharts', '@radix-ui/react-avatar', '@radix-ui/react-progress', '@radix-ui/react-slot'],
+    // Optimize CSS
+    optimizeCss: true,
   },
+  
+  // Production optimizations
+  poweredByHeader: false,
+  
+  // Output standalone for better performance
+  output: 'standalone',
 };
 
 export default nextConfig;

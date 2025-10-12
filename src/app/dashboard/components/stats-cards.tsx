@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface StatsCardProps {
@@ -6,7 +7,7 @@ interface StatsCardProps {
   className?: string
 }
 
-function StatsCard({ title, value, className }: StatsCardProps) {
+const StatsCard = memo(function StatsCard({ title, value, className }: StatsCardProps) {
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
@@ -19,7 +20,7 @@ function StatsCard({ title, value, className }: StatsCardProps) {
       </CardContent>
     </Card>
   )
-}
+})
 
 export function StatsCards() {
   const stats = [

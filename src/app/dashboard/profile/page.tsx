@@ -112,13 +112,13 @@ export default function ProfilePage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file size (4MB)
+    
     if (file.size > 4 * 1024 * 1024) {
       setMessage({ type: 'error', text: 'File size exceeds 4MB limit' })
       return
     }
 
-    // Validate file type
+    
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
     if (!allowedTypes.includes(file.type)) {
       setMessage({ type: 'error', text: 'Please upload JPG, PNG, GIF, or WebP image' })
@@ -143,11 +143,9 @@ export default function ProfilePage() {
         setMessage({ type: 'error', text: data.error || 'Failed to upload image' })
       } else {
         setMessage({ type: 'success', text: 'Profile image updated successfully' })
-        // Add timestamp to force browser to reload image
         const imageUrlWithCache = `${data.imageUrl}?t=${Date.now()}`
         setProfileImage(imageUrlWithCache)
         await update()
-        // Force session refresh
         router.refresh()
       }
     } catch (error) {
@@ -175,7 +173,6 @@ export default function ProfilePage() {
         
         <main className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-slate-950">
           <div className="max-w-4xl mx-auto space-y-6">
-            {/* Header */}
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
               <p className="text-gray-600 dark:text-slate-400 mt-1">Manage your account settings and preferences</p>
@@ -191,7 +188,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Profile Information */}
             <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardHeader>
                 <CardTitle className="text-gray-900 dark:text-white">Profile Information</CardTitle>
@@ -324,7 +320,7 @@ export default function ProfilePage() {
                   <div className="flex justify-end">
                     <Button
                       type="submit"
-                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600" 
                       disabled={isLoading}
                     >
                       {isLoading ? "Saving..." : "Save Changes"}
@@ -334,7 +330,6 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Change Password */}
             <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardHeader>
                 <CardTitle className="text-gray-900 dark:text-white">Change Password</CardTitle>
@@ -393,7 +388,7 @@ export default function ProfilePage() {
                   <div className="flex justify-end">
                     <Button
                       type="submit"
-                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 dark:text-white"
                       disabled={isLoading}
                     >
                       {isLoading ? "Updating..." : "Update Password"}

@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { PieChart, Pie, Cell } from "recharts"
@@ -25,7 +26,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function DeadlinesChart() {
+export const DeadlinesChart = memo(function DeadlinesChart() {
   return (
     <Card className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader>
@@ -46,7 +47,14 @@ export function DeadlinesChart() {
               paddingAngle={5}
               dataKey="value"
             />
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+            <ChartTooltip 
+              content={
+                <ChartTooltipContent 
+                  hideLabel 
+                  className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 [&_.text-muted-foreground]:text-gray-600 [&_.text-muted-foreground]:dark:text-gray-300 [&_.text-foreground]:text-gray-900 [&_.text-foreground]:dark:text-white"
+                />
+              } 
+            />
           </PieChart>
         </ChartContainer>
         
@@ -64,14 +72,21 @@ export function DeadlinesChart() {
         </div>
         
         {/* Percentage labels */}
-        <div className="text-center mt-4">
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">100%</div>
-          <div className="flex justify-around mt-2 text-sm">
-            <span className="text-amber-600 dark:text-amber-500">30%</span>
-            <span className="text-red-600 dark:text-red-500">45%</span>
+        <div className="grid grid-cols-3 gap-4 mt-6">
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: chartConfig.finalProject.color }}>100%</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Final Project</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: chartConfig.ongoing.color }}>30%</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Ongoing</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold" style={{ color: chartConfig.lateProject.color }}>45%</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Late Project</div>
           </div>
         </div>
       </CardContent>
     </Card>
   )
-}
+})

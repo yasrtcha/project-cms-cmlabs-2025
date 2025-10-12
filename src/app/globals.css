@@ -139,8 +139,8 @@
   }
   
   .auth-button-primary {
-    @apply w-full bg-[#0D5EBA] hover:bg-[#0A4A94] dark:bg-blue-600 dark:hover:bg-blue-700
-           text-white py-3 rounded-lg font-medium transition-colors;
+    @apply w-full bg-[#0D5EBA] hover:bg-[#0A4A94] dark:bg-white dark:hover:bg-gray-100
+           text-white dark:text-black py-3 rounded-lg font-medium transition-colors;
   }
   
   .auth-button-outline {

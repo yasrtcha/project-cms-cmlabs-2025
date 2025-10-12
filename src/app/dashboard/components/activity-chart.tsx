@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis } from "recharts"
@@ -48,7 +49,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ActivityChart() {
+export const ActivityChart = memo(function ActivityChart() {
   return (
     <Card className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -65,15 +66,24 @@ export function ActivityChart() {
               dataKey="name" 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 12, fill: 'currentColor' }}
+              className="fill-gray-700 dark:fill-gray-200"
             />
             <YAxis 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 12, fill: 'currentColor' }}
+              className="fill-gray-700 dark:fill-gray-200"
               domain={[0, 100]}
             />
-            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartTooltip 
+              content={
+                <ChartTooltipContent 
+                  className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 [&_.text-muted-foreground]:text-gray-600 [&_.text-muted-foreground]:dark:text-gray-300 [&_.text-foreground]:text-gray-900 [&_.text-foreground]:dark:text-white"
+                  labelClassName="text-gray-900 dark:text-white"
+                />
+              } 
+            />
             <Bar dataKey="onProgress" fill="var(--color-onProgress)" />
             <Bar dataKey="completed" fill="var(--color-completed)" />
             <Bar dataKey="pending" fill="var(--color-pending)" />
@@ -95,4 +105,4 @@ export function ActivityChart() {
       </CardContent>
     </Card>
   )
-}
+})

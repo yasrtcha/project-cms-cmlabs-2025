@@ -1,11 +1,11 @@
 "use client"
 
+import { memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus } from "lucide-react"
 import { getStatusColor, getStatusText } from "@/lib/dashboard-utils"
-import { FaPlus } from "react-icons/fa6";
 
 
 interface Organization {
@@ -68,7 +68,7 @@ function getStatusBadge(status: Organization["status"]) {
   )
 }
 
-export function OrganizationList() {
+export const OrganizationList = memo(function OrganizationList() {
   return (
     <Card className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -77,7 +77,7 @@ export function OrganizationList() {
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Your organizations with role, projects, and members.</p>
         </div>
         <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 flex items-center justify-center px-4 py-2 rounded-md text-white">
-          <FaPlus className="w-4 h-4" />
+          <Plus className="w-4 h-4" />
           New Project
         </Button>
       </CardHeader>
@@ -115,4 +115,4 @@ export function OrganizationList() {
       </CardContent>
     </Card>
   )
-}
+})
