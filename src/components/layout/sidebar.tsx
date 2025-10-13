@@ -44,7 +44,7 @@ function SidebarComponent({ className }: SidebarProps) {
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-2"
         >
-          {isCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+          {isCollapsed ? <Menu className="h-4 w-4 dark:text-white" /> : <X className="h-4 w-4 dark:text-white" />}
         </Button>
       </div>
 
