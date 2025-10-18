@@ -296,7 +296,7 @@ export default function RegisterPage() {
           {/* Sign Up Button */}
           <Button
             type="submit"
-            className="auth-button-primary"
+            className="bg-black text-white dark:bg-black border dark:text-white w-full"
             disabled={isLoading || !agreeTerms}
           >
             {isLoading ? "Loading..." : "Sign Up"}

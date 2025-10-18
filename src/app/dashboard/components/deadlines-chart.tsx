@@ -46,7 +46,7 @@ export function DeadlinesChart() {
               paddingAngle={5}
               dataKey="value"
             />
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+            <ChartTooltip content={<ChartTooltipContent hideLabel className="dark:bg-black dark:text-white dark:border-slate-700"/>} />
           </PieChart>
         </ChartContainer>
         

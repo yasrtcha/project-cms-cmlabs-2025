@@ -219,12 +219,12 @@ export default function ProfilePage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="flex items-center space-x-2 border rounded-full text-white dark:text-slate-300"
+                        className="flex items-center space-x-2 border-black rounded-full text-black dark:text-slate-300"
                         disabled={isUploadingImage}
                         onClick={() => document.getElementById('profile-image')?.click()}
                       >
                         <Camera className="h-4 w-4" />
-                        <span className="text-white dark:text-slate-300">{isUploadingImage ? 'Uploading...' : 'Change Photo'}</span>
+                        <span className="text-black dark:text-slate-300">{isUploadingImage ? 'Uploading...' : 'Change Photo'}</span>
                       </Button>
                     </label>
                     <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">JPG, GIF, PNG or WebP. Max size 4MB</p>
@@ -324,7 +324,7 @@ export default function ProfilePage() {
                   <div className="flex justify-end">
                     <Button
                       type="submit"
-                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
                       disabled={isLoading}
                     >
                       {isLoading ? "Saving..." : "Save Changes"}
@@ -393,7 +393,7 @@ export default function ProfilePage() {
                   <div className="flex justify-end">
                     <Button
                       type="submit"
-                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
                       disabled={isLoading}
                     >
                       {isLoading ? "Updating..." : "Update Password"}

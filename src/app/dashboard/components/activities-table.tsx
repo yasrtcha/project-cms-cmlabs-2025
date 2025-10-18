@@ -65,10 +65,14 @@ export function ActivitiesTable() {
     <Card className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-2xl font-semibold text-gray-900 dark:text-white">Your Activities</CardTitle>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Stay organized and boost your productivity</p>
+          <CardTitle className="text-2xl font-semibold text-gray-900 dark:text-white">
+            Your Activities
+          </CardTitle>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+            Stay organized and boost your productivity
+          </p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
+        <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 flex items-center justify-center px-4 py-2 rounded-md text-white">
           <FaPlus className=" w-4 h-4" />
           New Activities
         </Button>
@@ -78,22 +82,39 @@ export function ActivitiesTable() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 dark:border-slate-700">
-                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-slate-300">Name</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-slate-300">Date</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-slate-300">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-slate-300">Action</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-slate-300">
+                  Name
+                </th>
+                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-slate-300">
+                  Date
+                </th>
+                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-slate-300">
+                  Status
+                </th>
+                <th className="text-left py-3 px-4 font-medium text-gray-600 dark:text-slate-300">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>
               {activities.map((activity, index) => (
-                <tr key={index} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
-                  <td className="py-3 px-4 text-gray-900 dark:text-slate-100">{activity.name}</td>
-                  <td className="py-3 px-4 text-gray-600 dark:text-slate-400">{activity.date}</td>
+                <tr
+                  key={index}
+                  className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                  <td className="py-3 px-4 text-gray-900 dark:text-slate-100">
+                    {activity.name}
+                  </td>
+                  <td className="py-3 px-4 text-gray-600 dark:text-slate-400">
+                    {activity.date}
+                  </td>
                   <td className="py-3 px-4">
                     {getStatusBadge(activity.status)}
                   </td>
                   <td className="py-3 px-4">
-                    <Button variant="outline" size="sm" className="text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20">
                       View
                     </Button>
                   </td>
@@ -104,5 +125,5 @@ export function ActivitiesTable() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

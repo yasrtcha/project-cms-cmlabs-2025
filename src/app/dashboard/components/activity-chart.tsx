@@ -53,7 +53,7 @@ export function ActivityChart() {
     <Card className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Activity Chart</CardTitle>
-        <Button variant="outline" size="sm" className="bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 border-0">
+        <Button size="sm" className="bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 border-0">
           All Project
           <ChevronDown className="h-4 w-4 ml-1" />
         </Button>
@@ -65,7 +65,7 @@ export function ActivityChart() {
               dataKey="name" 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
             />
             <YAxis 
               axisLine={false}
@@ -73,7 +73,7 @@ export function ActivityChart() {
               tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               domain={[0, 100]}
             />
-            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartTooltip content={<ChartTooltipContent className="dark:bg-black dark:text-white dark:border-slate-700" />} />
             <Bar dataKey="onProgress" fill="var(--color-onProgress)" />
             <Bar dataKey="completed" fill="var(--color-completed)" />
             <Bar dataKey="pending" fill="var(--color-pending)" />
