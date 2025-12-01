@@ -1,6 +1,7 @@
 "use client"; // Komponen ini interaktif, jadi "use client" diperlukan
 
-import { Search, Trash2, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { Search, Trash2, LogIn } from "lucide-react";
 import { Sidebar } from "../../../components/layout/sidebar";
 import { Header } from "../../../components/layout/header";
 
@@ -13,6 +14,7 @@ type Collaborator = {
 // Data tiruan untuk mendemonstrasikan tabel
 const projectsData = [
   {
+    id: "cms",
     name: "CMS",
     status: "Owner",
     collaborators: [
@@ -23,6 +25,7 @@ const projectsData = [
     canDelete: true,
   },
   {
+    id: "sequence",
     name: "SEQUENCE",
     status: "Owner",
     collaborators: [
@@ -32,6 +35,7 @@ const projectsData = [
     canDelete: true,
   },
   {
+    id: "digi-raya",
     name: "DIGI RAYA",
     status: "Owner",
     collaborators: [
@@ -42,6 +46,7 @@ const projectsData = [
     canDelete: true,
   },
   {
+    id: "cmlabs",
     name: "CMLABS",
     status: "Owner",
     collaborators: [
@@ -52,6 +57,7 @@ const projectsData = [
     canDelete: true,
   },
   {
+    id: "pbl-polinema",
     name: "PBL Polinema",
     status: "Collaborator",
     collaborators: [{ initials: "DS", color: "bg-teal-500" }],
@@ -158,9 +164,11 @@ export default function OrganizationalContent() {
                     className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
                     <td className="p-4 whitespace-nowrap">
                       <div className="flex items-center space-x-4">
-                        <span className="font-medium text-gray-900 dark:text-slate-100">
+                        <Link
+                          href={`/organizational/${project.id}`}
+                          className="font-medium text-gray-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
                           {project.name}
-                        </span>
+                        </Link>
                         <StatusBadge status={project.status} />
                       </div>
                     </td>
@@ -177,7 +185,7 @@ export default function OrganizationalContent() {
                           </button>
                         )}
                         <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                          <ArrowRight size={20} />
+                          <LogIn size={20} />
                         </button>
                       </div>
                     </td>
