@@ -10,7 +10,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
-    href: "/",
+    href: "/dashboard",
     badge: null
   },
   {
@@ -29,7 +29,7 @@ export const MENU_ITEMS: MenuItem[] = [
     title: "Notification",
     icon: Bell,
     href: "/notification",
-    badge: "3"
+    badge: null
   }
 ]
 

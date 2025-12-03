@@ -54,7 +54,7 @@ export const ActivityChart = memo(function ActivityChart() {
     <Card className="w-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Activity Chart</CardTitle>
-        <Button variant="outline" size="sm" className="bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 border-0">
+        <Button size="sm" className="bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 border-0">
           All Project
           <ChevronDown className="h-4 w-4 ml-1" />
         </Button>
@@ -66,24 +66,18 @@ export const ActivityChart = memo(function ActivityChart() {
               dataKey="name" 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: 'currentColor' }}
-              className="fill-gray-700 dark:fill-gray-200"
+              tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+              className="fill-gray-700 dark:fill-white"
+              domain={[0, 100]}
             />
             <YAxis 
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: 'currentColor' }}
-              className="fill-gray-700 dark:fill-gray-200"
+              className="fill-gray-700 dark:fill-white"
               domain={[0, 100]}
             />
-            <ChartTooltip 
-              content={
-                <ChartTooltipContent 
-                  className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 [&_.text-muted-foreground]:text-gray-600 [&_.text-muted-foreground]:dark:text-gray-300 [&_.text-foreground]:text-gray-900 [&_.text-foreground]:dark:text-white"
-                  labelClassName="text-gray-900 dark:text-white"
-                />
-              } 
-            />
+            <ChartTooltip content={<ChartTooltipContent />} />
             <Bar dataKey="onProgress" fill="var(--color-onProgress)" />
             <Bar dataKey="completed" fill="var(--color-completed)" />
             <Bar dataKey="pending" fill="var(--color-pending)" />
@@ -98,7 +92,7 @@ export const ActivityChart = memo(function ActivityChart() {
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: config.color }}
               />
-              <span className="text-sm text-gray-900 dark:text-slate-200">{config.label}</span>
+              <span className="text-sm text-gray-700 dark:text-white font-medium dark:bg-slate-800">{config.label}</span>
             </div>
           ))}
         </div>

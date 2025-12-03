@@ -47,29 +47,33 @@ export default function ForgotPasswordPage() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Forgot Password</h1>
-          <p className="text-gray-600 mt-2">
-            No worries! Enter your email address below, and we'll send you a link to reset your password.
+          <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
+            Forgot Password
+          </h1>
+          <p className="text-center text-gray-600 dark:text-gray-400 mt-2">
+            No worries! Enter your email address below, and we'll send you a
+            link to reset your password.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
-                {error}
-              </div>
-            )}
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+              {error}
+            </div>
+          )}
 
-            {success && (
-              <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm">
-                Link reset password telah dikirim ke email Anda. Silakan cek inbox atau folder spam.
-              </div>
-            )}
+          {success && (
+            <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm">
+              Link reset password telah dikirim ke email Anda. Silakan cek inbox
+              atau folder spam.
+            </div>
+          )}
 
           {!success && (
             <>
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="auth-label">
                   Email
                 </label>
                 <input
@@ -77,7 +81,7 @@ export default function ForgotPasswordPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="auth-input"
                   placeholder="Enter your email address"
                   required
                   disabled={isLoading}
@@ -87,23 +91,21 @@ export default function ForgotPasswordPage() {
               <Button
                 type="submit"
                 className="w-full bg-[#0D5EBA] hover:bg-[#0A4A94] text-white py-3 rounded-lg font-medium transition-colors"
-                disabled={isLoading}
-              >
+                disabled={isLoading}>
                 {isLoading ? "Sending..." : "Reset password"}
               </Button>
             </>
           )}
 
           {/* Back to Login */}
-          <Link 
-            href="/auth/login" 
-            className="flex items-center justify-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
-          >
+          <Link
+            href="/auth/login"
+            className="flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 mt-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to log in
           </Link>
         </form>
       </div>
     </AuthLayout>
-  )
+  );
 }

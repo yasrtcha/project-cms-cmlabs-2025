@@ -47,14 +47,7 @@ export const DeadlinesChart = memo(function DeadlinesChart() {
               paddingAngle={5}
               dataKey="value"
             />
-            <ChartTooltip 
-              content={
-                <ChartTooltipContent 
-                  hideLabel 
-                  className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 [&_.text-muted-foreground]:text-gray-600 [&_.text-muted-foreground]:dark:text-gray-300 [&_.text-foreground]:text-gray-900 [&_.text-foreground]:dark:text-white"
-                />
-              } 
-            />
+            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
           </PieChart>
         </ChartContainer>
         
@@ -66,7 +59,7 @@ export const DeadlinesChart = memo(function DeadlinesChart() {
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: config.color }}
               />
-              <span className="text-sm text-gray-900 dark:text-slate-200">{config.label}</span>
+              <span className="text-sm text-gray-900 dark:text-white font-medium">{config.label}</span>
             </div>
           ))}
         </div>
@@ -75,15 +68,15 @@ export const DeadlinesChart = memo(function DeadlinesChart() {
         <div className="grid grid-cols-3 gap-4 mt-6">
           <div className="text-center">
             <div className="text-2xl font-bold" style={{ color: chartConfig.finalProject.color }}>100%</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Final Project</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Final Project</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold" style={{ color: chartConfig.ongoing.color }}>30%</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Ongoing</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Ongoing</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold" style={{ color: chartConfig.lateProject.color }}>45%</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Late Project</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Late Project</div>
           </div>
         </div>
       </CardContent>
