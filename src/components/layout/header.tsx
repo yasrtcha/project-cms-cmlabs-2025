@@ -5,7 +5,7 @@ import { useSession, signOut } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Moon, Sun, Zap, Filter, User, Settings, LogOut, ChevronDown } from "lucide-react"
+import { Moon, Sun, Zap, Filter, User, Settings, LogOut, ChevronDown, CreditCard } from "lucide-react"
 import { useTheme } from "@/contexts/theme-context"
 import { IoFilter } from "react-icons/io5"
 import { MdOutlineCallToAction } from "react-icons/md"
@@ -20,6 +20,9 @@ function getTitleFromPath(pathname: string) {
   }
   if (pathname.includes("/notification")) {
     return "Pages / Notifications";
+  }
+  if (pathname.includes("/billing")) {
+    return "Dashboard / Pages / Plan and Billing";
   }
   if (pathname.includes("/profile")) {
     return "Pages / My Profile";
@@ -146,10 +149,20 @@ function HeaderComponent() {
               </div>
 
               <button
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  router.push("/dashboard/billing");
+                }}
+                className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                <CreditCard className="h-4 w-4" />
+                <span>Plan and Billing</span>
+              </button>
+
+              <button
                 onClick={handleProfileClick}
                 className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                <User className="h-4 w-4" />
-                <span>My Profile</span>
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
               </button>
 
               <div className="border-t border-gray-100 dark:border-slate-700 mt-1 pt-1">

@@ -8,16 +8,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
 model User {
   id             String    @id @default(cuid())
   name           String?
   email          String?   @unique
   emailVerified  DateTime?
-  image          String?     // Untuk profile photo
+  image          String?
   password       String?  
-  company        String?     // Untuk signup
-  jobTitle       String?     // Untuk signup
-  country        String?     // Untuk signup
+  company        String?
+  jobTitle       String?
+  country        String?
+  status         String    @default("active") // active, suspended, deactivated
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -25,21 +30,16 @@ model User {
   accounts       Account[]
   sessions       Session[]
   
-  // Project Relations
-  ownedProjects  Project[] @relation("ProjectOwner")
-  collaborations ProjectCollaborator[]
-}
-
-model VerificationToken {
-  id         String   @id @default(cuid())
-  identifier String   // email
-  token      String   @unique
-  expires    DateTime
+  // Organization Relations
+  ownedOrganizations  Organization[]       @relation("OrganizationOwner")
+  organizationMembers OrganizationMember[]
   
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([identifier, token])
+  // Project Relations
+  ownedProjects       Project[]            @relation("ProjectOwner")
+  projectMembers      ProjectMember[]
+  
+  // Content Relations
+  contentEntries      ContentEntry[]
 }
 
 model Account {
@@ -69,6 +69,17 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model VerificationToken {
+  id         String   @id @default(cuid())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, token])
+}
+
 model PasswordResetToken {
   id         String   @id @default(cuid())
   email      String
@@ -77,33 +88,280 @@ model PasswordResetToken {
   createdAt  DateTime @default(now())
 }
 
-model Project {
+// ============================================================================
+// ORGANIZATION
+// ============================================================================
+
+model Organization {
   id          String   @id @default(cuid())
+  shortId     String   @unique // 6 karakter unik untuk display (e.g., "A1B2C3")
   name        String
+  slug        String   @unique
   description String?
+  image       String?
   ownerId     String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
   // Relations
-  owner         User                  @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  collaborators ProjectCollaborator[]
+  owner       User                  @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     OrganizationMember[]
+  projects    Project[]
   
   @@index([ownerId])
+  @@index([slug])
+  @@index([shortId])
 }
 
-model ProjectCollaborator {
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  role           String   @default("collaborator") // owner, collaborator
+  status         String   @default("pending")      // active, pending
+  invitedAt      DateTime @default(now())
+  joinedAt       DateTime?
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+// ============================================================================
+// PROJECT
+// ============================================================================
+
+model Project {
+  id             String   @id @default(cuid())
+  shortId        String   @unique // 6 karakter unik untuk display (e.g., "A1B2C3")
+  name           String
+  slug           String
+  description    String?
+  status         String   @default("progress") // progress, completed, archived
+  customDomain   String?
+  
+  // Ownership
+  ownerId        String
+  organizationId String?  // null = Personal Project, ada = Organizational Project
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  owner          User          @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        ProjectMember[]
+  contentTypes   ContentType[]
+  
+  @@unique([organizationId, slug])
+  @@index([ownerId])
+  @@index([organizationId])
+  @@index([shortId])
+}
+
+model ProjectMember {
   id        String   @id @default(cuid())
   projectId String
   userId    String
-  role      String   @default("member") // owner, admin, member, viewer
+  roleId    String
+  status    String   @default("active") // active, pending
   addedAt   DateTime @default(now())
   
   // Relations
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role    @relation(fields: [roleId], references: [id])
   
   @@unique([projectId, userId])
   @@index([projectId])
   @@index([userId])
+  @@index([roleId])
+}
+
+// ============================================================================
+// ROLES & PERMISSIONS
+// ============================================================================
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   // Super Admin, Admin, Editor, SEO Manager, Viewer
+  slug        String   // super-admin, admin, editor, seo-manager, viewer
+  description String?
+  color       String?  // Untuk badge color (blue, yellow, green, dll)
+  isSystem    Boolean  @default(false) // true = role bawaan, tidak bisa dihapus
+  projectId   String?  // null = global role, ada = custom role per project
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  permissions RolePermission[]
+  members     ProjectMember[]
+  
+  @@unique([slug, projectId])
+  @@index([projectId])
+}
+
+model RolePermission {
+  id        String  @id @default(cuid())
+  roleId    String
+  module    String  // content, media, seo, settings, users, projects
+  canCreate Boolean @default(false)
+  canRead   Boolean @default(false)
+  canUpdate Boolean @default(false)
+  canDelete Boolean @default(false)
+  
+  // Relations
+  role      Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, module])
+  @@index([roleId])
+}
+
+// ============================================================================
+// CONTENT MANAGEMENT
+// ============================================================================
+
+// Content Type (Blog, Product, Landing Page, dll)
+model ContentType {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String   // "Blog Post", "Product", "Home Page"
+  slug        String   // "blog-post", "product", "home-page"
+  description String?
+  type        String   @default("multiple") // single, multiple
+  hasSeo      Boolean  @default(false)
+  hasWorkflow Boolean  @default(false)
+  hasMultiLang Boolean @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fieldGroups FieldGroup[]
+  entries     ContentEntry[]
+  
+  @@unique([projectId, slug])
+  @@index([projectId])
+}
+
+// Field Group (untuk mengelompokkan fields)
+model FieldGroup {
+  id            String   @id @default(cuid())
+  contentTypeId String
+  name          String   // "Hero Section", "SEO Settings"
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  contentType   ContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
+  fields        Field[]
+  
+  @@index([contentTypeId])
+}
+
+// Field Definition
+model Field {
+  id            String   @id @default(cuid())
+  fieldGroupId  String
+  name          String   // "Title", "Hero Image"
+  slug          String   // "title", "hero-image"
+  type          String   // text, richtext, number, date, image, boolean, relation, select
+  description   String?
+  placeholder   String?
+  defaultValue  String?
+  order         Int      @default(0)
+  
+  // Validation
+  isRequired    Boolean  @default(false)
+  isUnique      Boolean  @default(false)
+  minLength     Int?
+  maxLength     Int?
+  min           Float?
+  max           Float?
+  
+  // Options (untuk select, multiselect)
+  options       Json?    // ["Option 1", "Option 2"] atau [{value, label}]
+  
+  // Relation Config (jika type = "relation")
+  relationType      String?  // one-to-one, one-to-many, many-to-many
+  relatedTypeId     String?  // ID ContentType yang direlasikan
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  fieldGroup    FieldGroup   @relation(fields: [fieldGroupId], references: [id], onDelete: Cascade)
+  values        FieldValue[]
+  
+  @@unique([fieldGroupId, slug])
+  @@index([fieldGroupId])
+}
+
+// Content Entry (Instance dari Content Type)
+model ContentEntry {
+  id            String    @id @default(cuid())
+  contentTypeId String
+  status        String    @default("draft") // draft, pending, approved, published
+  locale        String    @default("en")    // untuk multi-language
+  createdById   String
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // SEO Fields
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String?
+  seoSlug        String?
+  
+  // Relations
+  contentType   ContentType      @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
+  createdBy     User             @relation(fields: [createdById], references: [id])
+  fieldValues   FieldValue[]
+  relationsFrom ContentRelation[] @relation("FromEntry")
+  relationsTo   ContentRelation[] @relation("ToEntry")
+  
+  @@index([contentTypeId])
+  @@index([createdById])
+  @@index([status])
+}
+
+// Field Values (Data aktual per entry)
+model FieldValue {
+  id        String   @id @default(cuid())
+  entryId   String
+  fieldId   String
+  value     String?  // JSON string untuk semua tipe data
+  locale    String   @default("en")
+  
+  // Relations
+  entry     ContentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  field     Field        @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  
+  @@unique([entryId, fieldId, locale])
+  @@index([entryId])
+  @@index([fieldId])
+}
+
+// Content Relations (untuk relation fields)
+model ContentRelation {
+  id          String   @id @default(cuid())
+  fromEntryId String
+  toEntryId   String
+  fieldId     String
+  order       Int      @default(0)
+  
+  // Relations
+  fromEntry   ContentEntry @relation("FromEntry", fields: [fromEntryId], references: [id], onDelete: Cascade)
+  toEntry     ContentEntry @relation("ToEntry", fields: [toEntryId], references: [id], onDelete: Cascade)
+  
+  @@unique([fromEntryId, toEntryId, fieldId])
+  @@index([fromEntryId])
+  @@index([toEntryId])
 }
