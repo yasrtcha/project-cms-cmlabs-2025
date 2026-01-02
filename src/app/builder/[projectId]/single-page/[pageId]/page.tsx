@@ -7,11 +7,9 @@ export default async function Page({ params }: { params: Promise<{ projectId: st
   const { projectId, pageId } = await params;
 
   // 2. Ambil data dari tabel BARU (BuilderContentType)
-  // Kita ganti 'prisma.page' menjadi 'prisma.builderContentType'
   const pageData = await prisma.builderContentType.findUnique({
     where: { id: pageId },
     include: {
-      // Struktur baru: ContentType -> FieldGroups -> Fields
       fieldGroups: {
         include: {
           fields: {
@@ -25,12 +23,22 @@ export default async function Page({ params }: { params: Promise<{ projectId: st
 
   if (!pageData) return notFound();
 
-  // 3. Kirim data ke Client Component
+  // 3. Ambil semua Content Type lain untuk keperluan Relasi
+  const allContentTypes = await prisma.builderContentType.findMany({
+    where: {
+      projectId: projectId,
+      NOT: { id: pageId } // Opsional: exclude self jika self-relation belum didukung kompleks
+    },
+    select: { id: true, name: true, slug: true, type: true }
+  });
+
+  // 4. Kirim data ke Client Component
   return (
-    <SinglePageBuilderClient 
-      initialData={pageData} 
-      projectId={projectId} 
-      pageId={pageId} 
+    <SinglePageBuilderClient
+      initialData={pageData}
+      projectId={projectId}
+      pageId={pageId}
+      allContentTypes={allContentTypes}
     />
   );
 }
