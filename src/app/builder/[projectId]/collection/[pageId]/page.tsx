@@ -1,21 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import SinglePageBuilderClient from "./SinglePageBuilderClient";
+// Kita import Client Component yang sudah canggih tadi
+import SinglePageBuilderClient from "../../single-page/[pageId]/SinglePageBuilderClient"; 
 
-export default async function Page({ params }: { params: Promise<{ projectId: string, pageId: string }> }) {
-  // 1. Ambil params
+export default async function CollectionBuilderPage({ 
+  params 
+}: { 
+  params: Promise<{ projectId: string, pageId: string }> 
+}) {
   const { projectId, pageId } = await params;
 
-  // 2. Ambil data dari tabel BARU (BuilderContentType)
-  // Kita ganti 'prisma.page' menjadi 'prisma.builderContentType'
+  // 1. Ambil data Content Type
   const pageData = await prisma.builderContentType.findUnique({
     where: { id: pageId },
     include: {
-      // Struktur baru: ContentType -> FieldGroups -> Fields
       fieldGroups: {
         include: {
           fields: {
-            orderBy: { order: 'asc' }
+            orderBy: { order: 'asc' } // Pastikan urutan sesuai Drag & Drop
           }
         },
         orderBy: { order: 'asc' }
@@ -25,7 +27,7 @@ export default async function Page({ params }: { params: Promise<{ projectId: st
 
   if (!pageData) return notFound();
 
-  // 3. Kirim data ke Client Component
+  // 2. Render Builder yang sama
   return (
     <SinglePageBuilderClient 
       initialData={pageData} 

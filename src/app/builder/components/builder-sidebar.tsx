@@ -1,242 +1,217 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname, useParams } from "next/navigation"; 
+import { 
+  FileText, Layers, Box, Plus, Settings, ChevronDown, ChevronRight, Code 
+} from "lucide-react"; // Saya tambahkan icon 'Code'
 import { useState } from "react";
-import Image from "next/image";
-import Link from "next/link"; // Import Link
-import { useParams } from "next/navigation"; // Import useParams
-import {
-  Search,
-  Settings,
-  FileText,
-  Files,
-  Box,
-  Plus,
-  ChevronRight,
-  ChevronDown,
-  Menu,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CreateTypeModal } from "./create-type-modal"; 
 
-// Komponen item accordion untuk menu tree
-const SidebarSection = ({
-  title,
-  icon: Icon,
-  items,
-  isOpen,
-  onToggle,
-  isCollapsed,
-  projectId, // Terima projectId untuk bikin link
-}: any) => {
-  if (isCollapsed) {
-    return (
-      <div className="mb-4 flex flex-col items-center group relative">
-        <button
-          className="p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-800 rounded-md transition-colors"
-          title={title}>
-          <Icon size={20} />
-        </button>
-        <div className="absolute left-full top-0 ml-2 hidden group-hover:block bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg z-50 whitespace-nowrap">
-          {title}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mb-1">
-      <button
-        onClick={onToggle}
-        className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md transition-colors group">
-        <span className="text-gray-400 mr-2 group-hover:text-gray-600 dark:group-hover:text-gray-300">
-          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </span>
-        <span className="flex-1 text-left font-semibold text-gray-800 dark:text-gray-100">
-          {title}
-        </span>
-        <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">
-          {items.length}
-        </span>
-      </button>
-
-      {isOpen && (
-        <div className="ml-4 mt-1 space-y-0.5 border-l border-gray-200 dark:border-slate-700 pl-3">
-          {items.map((item: any, idx: number) => {
-            // Cek apakah item punya href (link) atau cuma teks biasa
-            const isLink = typeof item === "object" && item.href;
-            const label = isLink ? item.label : item;
-
-            const Content = () => (
-              <div className="flex items-center w-full px-2 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20 rounded transition-colors cursor-pointer">
-                <Plus size={12} className="mr-1.5" />
-                {label}
-              </div>
-            );
-
-            return isLink ? (
-              <Link key={idx} href={`/builder/${projectId}${item.href}`}>
-                <Content />
-              </Link>
-            ) : (
-              <button key={idx} className="w-full text-left">
-                <Content />
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+// Tipe data untuk props
+type ContentTypeProps = {
+  id: string;
+  name: string;
+  slug: string;
+  type: string; // "SINGLE" | "COLLECTION" | "COMPONENT"
 };
 
-export function BuilderSidebar({ projectName }: { projectName: string }) {
-  const params = useParams();
-  const projectId = params.projectId as string; // Ambil ID project dari URL
-
+export function BuilderSidebar({ 
+  projectName, 
+  contentTypes 
+}: { 
+  projectName: string; 
+  contentTypes: ContentTypeProps[] 
+}) {
+  const pathname = usePathname();
+  const params = useParams(); 
+  const projectId = params.projectId as string; 
+  
+  // State untuk expand/collapse menu
   const [openSections, setOpenSections] = useState({
     single: true,
-    multiple: true,
-    component: true,
+    collection: true,
+    component: true
   });
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // State untuk Modal Create
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"SINGLE" | "COLLECTION" | "COMPONENT">("SINGLE");
 
-  const toggleSection = (section: keyof typeof openSections) => {
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  // Filter data berdasarkan Tipe-nya
+  const singlePages = contentTypes.filter((c) => c.type === "SINGLE");
+  const collectionPages = contentTypes.filter((c) => c.type === "COLLECTION");
+  const components = contentTypes.filter((c) => c.type === "COMPONENT");
+
+  const toggleSection = (section: "single" | "collection" | "component") => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Definisi Menu Items dengan Link
-  const menuItems = {
-    single: [
-      // Item ini untuk contoh halaman "Home" yang sudah dibuat
-      { label: "Home", href: "/single-page/home", icon: "home" },
-      // Item ini tombol create
-      {
-        label: "Create Single Page",
-        href: "/single-page/create",
-        isAction: true,
-      },
-    ],
-    multiple: [
-      { label: "Create Multiple Page", href: "/multiple-page/create" }, // Contoh untuk nanti
-    ],
-    component: ["Create Folder", "Create Component"],
+  // Helper membuka modal
+  const openModal = (type: "SINGLE" | "COLLECTION" | "COMPONENT") => {
+    setModalType(type);
+    setIsModalOpen(true);
   };
 
   return (
-    <div
-      className={cn(
-        "h-screen bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 flex flex-col transition-all duration-300 ease-in-out z-20 shadow-sm",
-        isCollapsed ? "w-16" : "w-72"
-      )}>
-      {/* Header Sidebar */}
-      <div className="h-16 flex items-center px-4 border-b border-gray-200 dark:border-slate-800">
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1.5 mr-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md text-gray-600 dark:text-gray-300 transition-colors">
-          <Menu size={20} />
-        </button>
-
-        {!isCollapsed && (
-          <div className="flex items-center space-x-3 overflow-hidden">
-            <Image
-              src="/assets/logo cms black.png"
-              alt="Logo"
-              width={32}
-              height={32}
-              className="rounded flex-shrink-0"
-            />
-            <span className="font-bold text-gray-900 dark:text-white truncate text-sm uppercase tracking-wide">
-              {projectName || "CMS PROJECT"}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Konten Sidebar */}
-      {!isCollapsed ? (
-        <div className="flex-1 overflow-y-auto py-4 px-3 custom-scrollbar">
-          <div className="mb-4 px-1">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white border-b-2 border-black dark:border-white w-fit pb-1">
-              Content Builder
-            </h2>
-          </div>
-
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search"
-                className="w-full pl-9 pr-3 py-2 bg-gray-100 dark:bg-slate-800 border-none rounded-md text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
+    <>
+      <div className="w-64 h-full bg-white dark:bg-slate-950 border-r border-gray-200 dark:border-slate-800 flex flex-col">
+        {/* Header Project */}
+        <div className="p-4 border-b border-gray-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+              CMS
+            </div>
+            <div>
+              <h2 className="font-bold text-sm text-gray-900 dark:text-white uppercase truncate max-w-[140px]">
+                {projectName}
+              </h2>
+              <p className="text-[10px] text-gray-500">Content Builder</p>
             </div>
           </div>
+        </div>
 
-          <div className="space-y-4">
-            <SidebarSection
-              title="Single Page"
-              icon={FileText}
-              isOpen={openSections.single}
-              onToggle={() => toggleSection("single")}
-              items={menuItems.single}
-              isCollapsed={false}
-              projectId={projectId} // Pass projectId
-            />
-            <SidebarSection
-              title="Multiple Page"
-              icon={Files}
-              isOpen={openSections.multiple}
-              onToggle={() => toggleSection("multiple")}
-              items={menuItems.multiple}
-              isCollapsed={false}
-              projectId={projectId}
-            />
-            <SidebarSection
-              title="Component"
-              icon={Box}
-              isOpen={openSections.component}
-              onToggle={() => toggleSection("component")}
-              items={menuItems.component}
-              isCollapsed={false}
-              projectId={projectId}
-            />
+        {/* Menu List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          
+          {/* SECTION 1: SINGLE PAGE */}
+          <div>
+            <div className="flex items-center justify-between mb-2 cursor-pointer group" onClick={() => toggleSection("single")}>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider group-hover:text-blue-600">Single Page</h3>
+              {openSections.single ? <ChevronDown size={14} className="text-gray-400"/> : <ChevronRight size={14} className="text-gray-400"/>}
+            </div>
+            
+            {openSections.single && (
+              <div className="space-y-1 ml-1">
+                {singlePages.map((page) => (
+                  <Link
+                    key={page.id}
+                    href={`/builder/${projectId}/single-page/${page.id}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                      pathname.includes(page.id) 
+                        ? "bg-blue-50 text-blue-600 font-medium" 
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <FileText size={16} />
+                    {page.name}
+                  </Link>
+                ))}
+                <button 
+                  onClick={() => openModal("SINGLE")}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:underline mt-1"
+                >
+                  <Plus size={14} /> Create Single Page
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col items-center py-6 space-y-4 overflow-y-auto">
-          <Image
-            src="/assets/logo cms black.png"
-            alt="Logo"
-            width={32}
-            height={32}
-            className="rounded mb-4 flex-shrink-0"
-          />
-          <div className="w-full border-t border-gray-200 dark:border-slate-800 my-2"></div>
-          <SidebarSection
-            icon={FileText}
-            title="Single Page"
-            isCollapsed={true}
-          />
-          <SidebarSection
-            icon={Files}
-            title="Multiple Page"
-            isCollapsed={true}
-          />
-          <SidebarSection icon={Box} title="Component" isCollapsed={true} />
-        </div>
-      )}
 
-      {/* Footer Settings */}
-      <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50">
-        <button
-          className={cn(
-            "flex items-center justify-center text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-slate-800 rounded-md transition-colors",
-            isCollapsed ? "w-8 h-8 p-0" : "w-full p-2"
-          )}
-          title="Settings">
-          <Settings size={20} />
-        </button>
+          {/* SECTION 2: MULTIPLE PAGE (COLLECTION) */}
+          <div>
+            <div className="flex items-center justify-between mb-2 cursor-pointer group" onClick={() => toggleSection("collection")}>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider group-hover:text-blue-600">Multiple Page</h3>
+              {openSections.collection ? <ChevronDown size={14} className="text-gray-400"/> : <ChevronRight size={14} className="text-gray-400"/>}
+            </div>
+
+            {openSections.collection && (
+              <div className="space-y-1 ml-1">
+                {collectionPages.map((page) => (
+                  <Link
+                    key={page.id}
+                    href={`/builder/${projectId}/collection/${page.id}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                      pathname.includes(page.id) 
+                        ? "bg-blue-50 text-blue-600 font-medium" 
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <Layers size={16} />
+                    {page.name}
+                  </Link>
+                ))}
+                <button 
+                  onClick={() => openModal("COLLECTION")}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:underline mt-1"
+                >
+                  <Plus size={14} /> Create Multiple Page
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 3: COMPONENT */}
+          <div>
+            <div className="flex items-center justify-between mb-2 cursor-pointer group" onClick={() => toggleSection("component")}>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider group-hover:text-blue-600">Component</h3>
+              {openSections.component ? <ChevronDown size={14} className="text-gray-400"/> : <ChevronRight size={14} className="text-gray-400"/>}
+            </div>
+
+            {openSections.component && (
+              <div className="space-y-1 ml-1">
+                {components.map((comp) => (
+                  <Link
+                    key={comp.id}
+                    href={`/builder/${projectId}/component/${comp.id}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                      pathname.includes(comp.id) 
+                        ? "bg-blue-50 text-blue-600 font-medium" 
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <Box size={16} />
+                    {comp.name}
+                  </Link>
+                ))}
+                <button 
+                  onClick={() => openModal("COMPONENT")}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:underline mt-1"
+                >
+                  <Plus size={14} /> Create Component
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 4: API & SETTINGS (BARU DITAMBAHKAN) */}
+          <div className="pt-6 mt-6 border-t border-gray-100 dark:border-slate-800">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-1">
+              Integration & Settings
+            </h3>
+            
+            <Link
+              href={`/builder/${projectId}/api-integration`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                pathname.includes("api-integration")
+                  ? "bg-blue-50 text-blue-600 font-medium"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              <Code size={16} />
+              API Integration
+            </Link>
+          </div>
+
+        </div>
+
+        {/* Footer Settings */}
+        <div className="p-4 border-t border-gray-100 dark:border-slate-800">
+          <button className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900">
+            <Settings size={18} />
+            Project Settings
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* RENDER MODAL */}
+      <CreateTypeModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        type={modalType} 
+        projectId={projectId}
+        projectName={projectName}
+      />
+    </>
   );
 }

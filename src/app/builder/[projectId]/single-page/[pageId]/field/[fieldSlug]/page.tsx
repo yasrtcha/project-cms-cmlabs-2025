@@ -6,7 +6,6 @@ import { useParams, useRouter } from "next/navigation";
 import {
   MoreVertical,
   Trash2,
-  ArrowRight,
   FileText,
   FolderPlus,
   Plus,
@@ -15,8 +14,13 @@ import {
   Settings,
   ChevronDown,
   ChevronUp,
-  Save,
   Menu,
+  Hash,
+  Calendar,
+  MapPin,
+  Layers,
+  Link as LinkIcon,
+  Image as ImageIcon,
 } from "lucide-react";
 
 export default function FieldConfigurationPage() {
@@ -25,25 +29,39 @@ export default function FieldConfigurationPage() {
 
   const projectId = params.projectId as string;
   const pageId = params.pageId as string;
-  const fieldSlug = params.fieldSlug as string; // misal: "text"
+  const fieldSlug = params.fieldSlug as string; // Contoh: "text", "media", dll.
 
-  // State untuk accordion Advanced Configuration
+  // State untuk kontrol tampilan
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-
-  // State form dummy
   const [fieldName, setFieldName] = useState("");
   const [apiId, setApiId] = useState("");
 
-  // Helper untuk generate API ID otomatis dari Name
+  // 1. Fungsi Helper untuk generate API ID otomatis
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setFieldName(val);
+    // Mengubah spasi menjadi underscore dan huruf kecil semua
     setApiId(val.toLowerCase().replace(/\s+/g, "_"));
+  };
+
+  // 2. Fungsi untuk memilih Ikon secara dinamis berdasarkan URL (fieldSlug)
+  const getIcon = () => {
+    switch (fieldSlug) {
+      case "text": return <Type size={20} />;
+      case "media": return <ImageIcon size={20} />;
+      case "number": return <Hash size={20} />;
+      case "date": return <Calendar size={20} />;
+      case "location": return <MapPin size={20} />;
+      case "multiple": return <Layers size={20} />;
+      case "relation": return <LinkIcon size={20} />;
+      default: return <FileText size={20} />;
+    }
   };
 
   return (
     <div className="h-full w-full bg-white dark:bg-slate-950 flex flex-col overflow-hidden relative">
-      {/* ================= HEADER HALAMAN (Sama seperti sebelumnya) ================= */}
+      
+      {/* ================= HEADER HALAMAN ================= */}
       <div className="px-8 py-6 border-b border-gray-100 dark:border-slate-800 shrink-0">
         <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Pages / Content Builder /{" "}
@@ -54,8 +72,8 @@ export default function FieldConfigurationPage() {
 
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-4">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center border border-orange-200 shadow-sm">
-              <span className="text-2xl">🏠</span>
+            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center border border-orange-200 shadow-sm text-2xl">
+              🏠
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -85,34 +103,32 @@ export default function FieldConfigurationPage() {
 
       {/* ================= AREA UTAMA (SPLIT VIEW) ================= */}
       <div className="flex-1 flex overflow-hidden">
+        
         {/* --- KIRI: PREVIEW STRUKTUR KONTEN --- */}
         <div className="flex-1 p-8 overflow-y-auto bg-gray-50 dark:bg-slate-900/50">
-          {/* Item Field yang sedang diedit */}
           <div className="max-w-3xl">
-            <div className="flex items-center justify-between bg-gray-200 dark:bg-slate-800 p-4 rounded-md border border-gray-300 dark:border-slate-700 mb-4">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Preview Structure</h4>
+            
+            <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 mb-4 shadow-sm">
               <div className="flex items-center gap-4">
-                {/* Drag Handle Icon */}
-                <Menu className="text-gray-500 cursor-grab" size={20} />
+                <Menu className="text-gray-400 cursor-grab" size={20} />
 
-                {/* Icon Box Ungu */}
-                <div className="w-10 h-10 bg-purple-500 rounded flex items-center justify-center text-white font-medium text-xs">
-                  {/* Tampilkan ikon sesuai tipe field, di sini hardcode icon Text dulu sesuai gambar */}
-                  icon
+                {/* Box Ikon Dinamis */}
+                <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-purple-200 dark:shadow-none">
+                  {getIcon()}
                 </div>
 
-                {/* Info Field */}
                 <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white text-lg">
-                    {fieldSlug === "text" ? "Text Field" : "Field"}
+                  <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                    {fieldName || "New Field Name"}
                   </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Short Text
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">
+                    {fieldSlug} Field
                   </p>
                 </div>
               </div>
 
-              {/* Tombol Hapus */}
-              <button className="text-red-500 hover:text-red-700 transition-colors p-2">
+              <button className="text-red-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
                 <Trash2 size={20} />
               </button>
             </div>
@@ -120,133 +136,107 @@ export default function FieldConfigurationPage() {
         </div>
 
         {/* --- KANAN: PANEL CONFIGURATION --- */}
-        <div className="w-[400px] bg-gray-300/50 dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 flex flex-col h-full shadow-xl z-10">
+        <div className="w-[400px] bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 flex flex-col h-full shadow-2xl z-10">
+          
           {/* Header Panel */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-300 dark:border-slate-700 bg-gray-200 dark:bg-slate-800/80">
-            <div className="flex items-center gap-2">
-              <Settings
-                size={20}
-                className="text-gray-700 dark:text-gray-200"
-              />
-              <h2 className="font-bold text-lg text-gray-900 dark:text-white">
-                Setting Configuration
+          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-slate-800">
+            <div className="flex items-center gap-2 text-blue-600">
+              <Settings size={20} />
+              <h2 className="font-bold text-base text-gray-900 dark:text-white">
+                Field Settings
               </h2>
             </div>
             <Link
-              href={`/builder/${projectId}/single-page/${pageId}`} // Tombol X kembali ke halaman list
-              className="p-1 hover:bg-gray-300 dark:hover:bg-slate-700 rounded-full transition-colors">
-              <X size={24} className="text-gray-700 dark:text-white" />
+              href={`/builder/${projectId}/single-page/${pageId}`}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+            >
+              <X size={20} className="text-gray-500 dark:text-gray-400" />
             </Link>
           </div>
 
-          {/* Isi Form Konfigurasi */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Basic Configuration Section */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800 dark:text-gray-100">
-                  Basic Configuration
+          {/* Form Konfigurasi */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            
+            {/* Section: Basic Configuration */}
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                  Basic Config
                 </h3>
-                <ChevronUp size={18} className="text-gray-500" />
+                <ChevronUp size={16} className="text-gray-400" />
               </div>
 
               <div className="space-y-4">
-                {/* Name Input */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">
-                    Name
+                  <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">
+                    Field Name
                   </label>
                   <input
                     type="text"
                     value={fieldName}
                     onChange={handleNameChange}
-                    className="w-full p-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
+                    placeholder="e.g. Hero Title"
+                    className="w-full p-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-900 dark:text-white transition-all"
                   />
                 </div>
 
-                {/* API ID Input */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">
-                    API id
+                  <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">
+                    API ID
                   </label>
                   <input
                     type="text"
                     value={apiId}
                     readOnly
-                    className="w-full p-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-md outline-none text-gray-900 dark:text-white"
+                    className="w-full p-2.5 bg-gray-100 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-lg text-sm text-gray-400 dark:text-gray-600 cursor-not-allowed outline-none"
                   />
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    it's generated automatically and used to generate API routes
-                  </p>
                 </div>
 
-                {/* Checkboxes */}
-                <div className="space-y-3 pt-2">
+                <div className="space-y-4 pt-2">
                   <label className="flex items-start gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5"
-                    />
+                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-1" />
                     <div>
-                      <span className="block text-sm font-bold text-gray-800 dark:text-gray-200">
-                        Required
-                      </span>
-                      <span className="block text-xs text-gray-500 leading-tight">
-                        Field must be filled before saving. Empty entries will
-                        be rejected.
-                      </span>
+                      <span className="block text-sm font-bold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 transition-colors">Required</span>
+                      <p className="text-[11px] text-gray-500 leading-tight mt-0.5">Field must be filled before saving.</p>
                     </div>
                   </label>
 
                   <label className="flex items-start gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5"
-                    />
+                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-1" />
                     <div>
-                      <span className="block text-sm font-bold text-gray-800 dark:text-gray-200">
-                        Unique
-                      </span>
-                      <span className="block text-xs text-gray-500 leading-tight">
-                        Duplicate entries are not allowed. Value must be unique
-                        across all records
-                      </span>
+                      <span className="block text-sm font-bold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 transition-colors">Unique</span>
+                      <p className="text-[11px] text-gray-500 leading-tight mt-0.5">Value must be unique across records.</p>
                     </div>
                   </label>
                 </div>
               </div>
             </div>
 
-            {/* Divider */}
-            <div className="border-t border-gray-300 dark:border-slate-700"></div>
+            <hr className="border-gray-100 dark:border-slate-800" />
 
-            {/* Advanced Configuration Section (Accordion) */}
+            {/* Section: Advanced (Accordion) */}
             <div>
               <button
                 onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                className="flex items-center justify-between w-full text-left">
-                <h3 className="font-medium text-gray-800 dark:text-gray-100">
-                  Advanced Configuration
+                className="flex items-center justify-between w-full text-left"
+              >
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                  Advanced Config
                 </h3>
-                {isAdvancedOpen ? (
-                  <ChevronUp size={18} />
-                ) : (
-                  <ChevronDown size={18} />
-                )}
+                {isAdvancedOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
 
               {isAdvancedOpen && (
-                <div className="pt-4 text-sm text-gray-500">
-                  {/* Isi Advanced Config bisa ditambahkan di sini nanti */}
-                  <p>Additional settings here...</p>
+                <div className="pt-4 space-y-2">
+                  <p className="text-xs text-gray-500 italic">No advanced settings available for this field type.</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Footer Panel */}
-          <div className="p-6 border-t border-gray-300 dark:border-slate-700 bg-gray-200 dark:bg-slate-800/50">
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-md transition-colors shadow-sm">
+          <div className="p-6 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50">
+            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98]">
               Save Configuration
             </button>
           </div>

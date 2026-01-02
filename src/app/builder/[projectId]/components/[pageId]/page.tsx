@@ -1,17 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import SinglePageBuilderClient from "./SinglePageBuilderClient";
+import SinglePageBuilderClient from "../../single-page/[pageId]/SinglePageBuilderClient";
 
-export default async function Page({ params }: { params: Promise<{ projectId: string, pageId: string }> }) {
-  // 1. Ambil params
+export default async function ComponentBuilderPage({ 
+  params 
+}: { 
+  params: Promise<{ projectId: string, pageId: string }> 
+}) {
   const { projectId, pageId } = await params;
 
-  // 2. Ambil data dari tabel BARU (BuilderContentType)
-  // Kita ganti 'prisma.page' menjadi 'prisma.builderContentType'
   const pageData = await prisma.builderContentType.findUnique({
     where: { id: pageId },
     include: {
-      // Struktur baru: ContentType -> FieldGroups -> Fields
       fieldGroups: {
         include: {
           fields: {
@@ -25,7 +25,6 @@ export default async function Page({ params }: { params: Promise<{ projectId: st
 
   if (!pageData) return notFound();
 
-  // 3. Kirim data ke Client Component
   return (
     <SinglePageBuilderClient 
       initialData={pageData} 

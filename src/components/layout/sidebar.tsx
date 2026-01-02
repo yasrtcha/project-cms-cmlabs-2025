@@ -25,7 +25,7 @@ function SidebarComponent({ className }: SidebarProps) {
       className
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+      <div className="flex items-center justify-between px-4 h-[77px] border-b border-gray-200 dark:border-slate-700">
         {!isCollapsed && (
           <div className="flex items-center space-x-2">
             <Image
@@ -49,34 +49,88 @@ function SidebarComponent({ className }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 px-3 space-y-1.5 py-4 overflow-y-auto">
         {MENU_ITEMS.map((item, index) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          
           return (
-            <Link key={index} href={item.href}>
-              <Button
-                variant={isActive ? "default" : "ghost"}
-                className={cn(
-                  "w-full justify-start text-left transition-colors",
-                  isActive 
-                    ? "bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600" 
-                    : "text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800",
-                  isCollapsed && "justify-center px-2"
-                )}
-              >
-                <item.icon className={cn("h-4 w-4", !isCollapsed && "mr-3")} size={16} />
-                {!isCollapsed && (
-                  <>
-                    <span className="flex-1">{item.title}</span>
-                    {item.badge && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </>
-                )}
-              </Button>
-            </Link>
+            <div key={index}>
+              {/* 1. Judul DASHBOARD */}
+              {index === 0 && !isCollapsed && (
+                <p className="px-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-2 tracking-wider">Dashboard</p>
+              )}
+
+              {/* 2. Judul ORGANIZATION */}
+              {item.href.includes('organizational') && !isCollapsed && (
+                <div className="flex items-center justify-between px-4 mb-2 mt-4">
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Organizational</p>
+                </div>
+              )}
+
+              {/* 3. Judul PERSONAL PROJECT */}
+              {item.href.includes('personal-project') && !isCollapsed && (
+                <div className="flex items-center justify-between px-4 mb-2 mt-4">
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Personal Project</p>
+                </div>
+              )}
+
+              {/* 4. GARIS PEMISAH - Diperbaiki agar terlihat di Dark Mode */}
+              {item.title.toLowerCase().includes('notification') && (
+                <hr className="border-slate-200 dark:border-slate-800 my-4 mx-2" />
+              )}
+
+              <Link href={item.href} className="block group">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start text-left transition-all duration-300 h-11 px-4 relative overflow-hidden",
+                    // Warna Button Aktif & Shadow disesuaikan untuk Dark Mode
+                    isActive 
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-200/50 dark:shadow-blue-900/20 rounded-xl hover:bg-blue-700 hover:text-white" 
+                      : "text-slate-600 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl",
+                    isCollapsed && "justify-center px-0"
+                  )}
+                >
+                  {/* Notch Bar Putih */}
+                  {isActive && !isCollapsed && (
+                    <div className="absolute left-0 top-3 bottom-3 w-1 bg-white rounded-r-full" />
+                  )}
+
+                  <item.icon 
+                    className={cn(
+                      "h-5 w-5 transition-transform duration-300 group-hover:scale-110", 
+                      !isCollapsed && "mr-3",
+                      isActive ? "text-white" : "text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                    )} 
+                  />
+                  
+                  {!isCollapsed && (
+                    <>
+                      <span className={cn(
+                        "flex-1 font-medium text-sm transition-colors",
+                        isActive ? "text-white" : "group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                      )}>
+                        {item.title}
+                      </span>
+                      
+                      {item.badge && (
+                        <Badge 
+                          variant="secondary" 
+                          className={cn(
+                            "ml-auto text-[10px] h-5 px-1.5 rounded-md border transition-all",
+                            isActive 
+                              ? "bg-white/20 text-white border-white/30" 
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 group-hover:border-blue-200 dark:group-hover:border-blue-900"
+                          )}
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </>
+                  )}
+                </Button>
+              </Link>
+            </div>
           )
         })}
       </nav>
@@ -84,5 +138,4 @@ function SidebarComponent({ className }: SidebarProps) {
   )
 }
 
-// Memoize to prevent unnecessary re-renders
 export const Sidebar = memo(SidebarComponent)
