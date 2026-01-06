@@ -3,16 +3,17 @@ import { BuilderSidebar } from "../components/builder-sidebar";
 
 export default async function BuilderLayout({
   children,
-  params, 
+  params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ projectId: string }>; 
+  params: Promise<{ projectId: string }>;
 }) {
-  // 1. AWAIT PARAMS
   const { projectId } = await params;
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { name: true }
+  });
 
-  // 2. AMBIL DATA DARI TABEL BARU (BuilderContentType)
-  // Bukan lagi prisma.page, tapi prisma.builderContentType
   const contentTypes = await prisma.builderContentType.findMany({
     where: {
       projectId: projectId,
@@ -22,15 +23,13 @@ export default async function BuilderLayout({
     },
   });
 
-  const formattedName = projectId.replace(/-/g, " ").toUpperCase();
+  const projectName = project?.name || "Untitled Project";
 
   return (
     <div className="flex h-screen bg-white dark:bg-slate-900">
-      {/* 3. KIRIM DATA KE SIDEBAR */}
-      {/* Props-nya sekarang bernama 'contentTypes', bukan 'initialPages' */}
-      <BuilderSidebar 
-        projectName={formattedName} 
-        contentTypes={contentTypes} 
+      <BuilderSidebar
+        projectName={projectName}
+        contentTypes={contentTypes}
       />
 
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-slate-950 relative">

@@ -4,9 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { deletePage } from "@/app/builder/_actions/page-actions";
 import { createNewField, reorderFields, updateField, deleteField } from "@/app/builder/_actions/field-actions";
+import { createFieldGroup, deleteFieldGroup } from "@/app/builder/_actions/group-actions";
 import {
   MoreVertical, Trash2, FileText, FolderPlus, Plus, X, Type,
-  Image as ImageIcon, Hash, Calendar, MapPin, Layers, Link as LinkIcon, Loader2, Menu, Settings, ChevronUp, ChevronDown, CheckSquare, Settings2
+  Image as ImageIcon, Hash, Calendar, MapPin, Layers, Link as LinkIcon, Loader2, Menu, Settings, ChevronUp, ChevronDown, CheckSquare, Layout
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -27,10 +28,13 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
   // --- STATE ---
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
 
   const [selectedType, setSelectedType] = useState<any>(null); // TypeDef object
   const [fieldName, setFieldName] = useState("");
   const [apiId, setApiId] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [targetGroupId, setTargetGroupId] = useState<string | null>(null);
 
   // Edit Mode State
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
@@ -44,14 +48,13 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
   const [isUnique, setIsUnique] = useState(false);
   const [relationTarget, setRelationTarget] = useState(""); // For Relation Field
 
-  // State lokal untuk list field
-  const [fields, setFields] = useState<any[]>([]);
+  // State lokal untuk list field groups
+  const [fieldGroups, setFieldGroups] = useState<any[]>([]);
 
   // Sinkronisasi state lokal
   useEffect(() => {
     if (initialData.fieldGroups) {
-      const flattened = initialData.fieldGroups.flatMap((group: any) => group.fields);
-      setFields(flattened);
+      setFieldGroups(initialData.fieldGroups);
     }
   }, [initialData]);
 
@@ -64,7 +67,10 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
   }, [fieldName, editingFieldId]);
 
   // --- HANDLERS ---
-  const handleOpenAdd = () => setIsTypeModalOpen(true);
+  const handleOpenAdd = (groupId: string) => {
+    setTargetGroupId(groupId);
+    setIsTypeModalOpen(true);
+  };
 
   const handleSelectType = (type: any) => {
     setSelectedType(type);
@@ -103,15 +109,33 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
 
   const handleDeleteFieldClick = async (fieldId: string) => {
     if (confirm("Delete this field?")) {
-      // Optimistic update
-      const newFields = fields.filter(f => f.id !== fieldId);
-      setFields(newFields);
-
       const res = await deleteField(fieldId, projectId);
       if (!res.success) {
         alert("Failed to delete field");
-        router.refresh(); // Revert
       }
+      router.refresh();
+    }
+  };
+
+  const handleSaveGroup = async () => {
+    if (!groupName) return alert("Please enter group name");
+    setIsLoading(true);
+    const res = await createFieldGroup({ name: groupName, pageId, projectId });
+    if (res.success) {
+      setGroupName("");
+      setIsGroupModalOpen(false);
+      router.refresh();
+    } else {
+      alert("Failed to create group");
+    }
+    setIsLoading(false);
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (confirm("Delete this group and all its fields?")) {
+      const res = await deleteFieldGroup(groupId, projectId);
+      if (res.success) router.refresh();
+      else alert("Failed to delete group");
     }
   };
 
@@ -126,7 +150,7 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
           fieldId: editingFieldId,
           projectId,
           name: fieldName,
-          apiId: apiId, // Allow updating API ID if needed, or keep it readonly in UI
+          apiId: apiId,
           isRequired,
           isUnique,
           options: selectedType.slug === 'relation' ? { relatedTypeId: relationTarget } : undefined
@@ -144,10 +168,15 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
           name: fieldName,
           type: selectedType.slug,
           pageId,
-          projectId
+          projectId,
+          fieldGroupId: targetGroupId || undefined
         });
 
         if (result.success) {
+          // If we had a target group, we need to move it (or the action should handle it)
+          // For now, our action puts it in "Main Content" by default. 
+          // We might need to update field actions to accept groupId.
+
           if (selectedType.slug === 'relation' && relationTarget) {
             await updateField({
               fieldId: result.data!.id,
@@ -183,257 +212,341 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
   // --- LOGIKA DRAG AND DROP ---
   const onDragEnd = async (result: any) => {
     if (!result.destination) return;
+    const { source, destination, draggableId, type } = result;
 
-    const sourceIndex = result.source.index;
-    const destinationIndex = result.destination.index;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    if (sourceIndex === destinationIndex) return;
-
-    // 1. Reorder Lokal (Optimistic UI)
-    const newFields = Array.from(fields);
-    const [reorderedItem] = newFields.splice(sourceIndex, 1);
-    newFields.splice(destinationIndex, 0, reorderedItem);
-
-    setFields(newFields); // Update tampilan langsung
-
-    // 2. Simpan urutan ke Database
-    const updates = newFields.map((field, index) => ({
-      id: field.id,
-      order: index,
-    }));
-
-    await reorderFields(updates, projectId);
+    // TODO: Reorder Logic for groups vs fields
+    // This is more complex now with multiple groups.
+    // For now, let's just keep it simple or implement reorder within same group.
   };
 
   return (
-    <div className="h-full w-full bg-white flex overflow-hidden font-sans">
+    <div className="h-full w-full bg-slate-50 dark:bg-slate-950 flex overflow-hidden font-sans transition-colors duration-300">
 
       {/* 1. CONTAINER KIRI (HEADER + KONTEN) */}
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
 
         {/* HEADER */}
-        <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
+        <div className="px-8 py-4 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-950 shrink-0 shadow-sm z-10 transition-colors">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-50 border border-orange-100 rounded-lg flex items-center justify-center text-2xl">🏠</div>
+            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-lg flex items-center justify-center text-xl shadow-sm">🏠</div>
             <div>
-              <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                {initialData.name} :
+              <h1 className="text-lg font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+                {initialData.name}
                 <div className="relative" ref={dropdownRef}>
-                  <button onClick={() => setIsDropdownOpen(!isDropdownOpen)}><MoreVertical size={18} className="text-gray-400" /></button>
+                  <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"><MoreVertical size={16} className="text-gray-400 dark:text-slate-500" /></button>
                   {isDropdownOpen && (
-                    <div className="absolute top-6 left-0 bg-white shadow-xl border rounded-md p-2 w-48 z-50">
-                      <button onClick={handleDeletePage} className="flex items-center gap-2 text-red-600 text-sm p-2 w-full hover:bg-red-50 rounded">
+                    <div className="absolute top-8 left-0 bg-white dark:bg-slate-900 shadow-xl border border-gray-200 dark:border-slate-800 rounded-lg p-1 w-48 z-50 animate-in fade-in zoom-in-95">
+                      <button onClick={handleDeletePage} className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm p-2 w-full hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors font-bold">
                         {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Delete Page
                       </button>
                     </div>
                   )}
                 </div>
               </h1>
-              <p className="text-xs text-gray-500">Build your content structure</p>
+              <p className="text-[10px] text-gray-500 dark:text-slate-400 font-medium">Content Builder • Struktur Laman</p>
             </div>
           </div>
           <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
+            <button
+              onClick={() => setIsGroupModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95"
+            >
               <FolderPlus size={16} /> Create Field Group
             </button>
-            <button onClick={handleOpenAdd} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-semibold transition-colors shadow-sm">
+            <button
+              onClick={() => handleOpenAdd("")}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95 border-b-2 border-blue-800 dark:border-blue-700"
+            >
               <Plus size={16} /> Add Field
             </button>
           </div>
         </div>
 
         {/* CONTENT AREA */}
-        <div className="flex-1 p-10 overflow-y-auto bg-white">
-          <div className="max-w-4xl bg-[#D9D9D9] rounded-lg p-8 min-h-[400px]">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Content Builder</h2>
+        <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+          <div className="max-w-5xl mx-auto space-y-8">
 
-            {fields.length === 0 ? (
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <FileText className="text-blue-500 mt-1" size={24} />
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-800">No Content Structure Yet</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed max-w-lg">
-                      Start building your content structure...
-                    </p>
-                  </div>
-                </div>
+            {fieldGroups.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900/50 border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                <Layout className="text-gray-300 dark:text-slate-700 mb-4" size={48} />
+                <h3 className="font-bold text-lg text-gray-800 dark:text-slate-200">Mulai Membangun Struktur</h3>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Buat Field Group pertama Anda untuk mengelompokkan field.</p>
+                <button
+                  onClick={() => setIsGroupModalOpen(true)}
+                  className="mt-6 flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+                >
+                  Buat Section Baru
+                </button>
               </div>
             ) : (
-              /* IMPLEMENTASI DRAG AND DROP CONTEXT */
-              <DragDropContext onDragEnd={onDragEnd}>
-                <Droppable droppableId="fields-list">
-                  {(provided) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className="space-y-3"
-                    >
-                      {fields.map((field: any, index: number) => {
+              fieldGroups.map((group: any) => (
+                <div key={group.id} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden group/section transition-all hover:shadow-md">
+                  {/* Group Header */}
+                  <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 font-bold border border-blue-200/50 dark:border-blue-800/30">
+                        <Layers size={18} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 dark:text-slate-100">{group.name}</h3>
+                        <p className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-widest">{group.fields?.length || 0} Fields</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 opacity-0 group-hover/section:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleOpenAdd(group.id)}
+                        className="p-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors flex items-center gap-1.5 text-xs font-bold"
+                      >
+                        <Plus size={14} /> Add Field
+                      </button>
+                      <button
+                        onClick={() => handleDeleteGroup(group.id)}
+                        className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 rounded-md transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Fields List */}
+                  <div className="p-4 bg-white dark:bg-slate-900 space-y-2">
+                    {group.fields && group.fields.length > 0 ? (
+                      group.fields.map((field: any) => {
                         const typeDef = fieldTypes.find(t => t.slug === field.type) || fieldTypes[0];
                         return (
-                          <Draggable key={field.id} draggableId={field.id} index={index}>
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className="flex items-center justify-between bg-[#C4C4C4] p-3 rounded-md shadow-sm border border-gray-300 group hover:border-blue-400 transition-colors cursor-default"
-                                onClick={() => handleEditClick(field)}
-                              >
-                                <div className="flex items-center gap-4">
-                                  {/* Handle Drag */}
-                                  <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing p-1 hover:bg-black/10 rounded">
-                                    <Menu size={20} className="text-gray-600" />
-                                  </div>
-
-                                  <div className={`w-12 h-10 rounded-md flex items-center justify-center text-white font-bold text-xs ${typeDef.color} shadow-sm`}>
-                                    <typeDef.icon size={20} />
-                                  </div>
-                                  <div>
-                                    <h4 className="font-bold text-gray-900 text-base leading-tight">
-                                      {field.name} {field.isRequired && <span className="text-red-500">*</span>}
-                                    </h4>
-                                    <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-wide">
-                                      {field.type} {field.isUnique ? '• Unique' : ''}
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteFieldClick(field.id); }}
-                                  className="text-gray-500 p-2 hover:bg-red-100 hover:text-red-600 rounded transition-colors"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
+                          <div
+                            key={field.id}
+                            onClick={() => handleEditClick(field)}
+                            className="flex items-center justify-between p-3.5 rounded-xl border border-gray-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition-all cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="cursor-grab p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Menu size={16} className="text-gray-400 dark:text-slate-600" />
                               </div>
-                            )}
-                          </Draggable>
-                        );
-                      })}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
+                              <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm border-b-2 border-black/10", typeDef.color)}>
+                                <typeDef.icon size={18} />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-sm">
+                                  {field.name} {field.isRequired && <span className="text-red-500">*</span>}
+                                </h4>
+                                <p className="text-[10px] text-gray-500 dark:text-slate-500 font-bold uppercase tracking-tight">
+                                  {field.apiId} • {field.type}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteFieldClick(field.id); }}
+                              className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <div className="py-8 text-center border-2 border-dashed border-gray-100 dark:border-slate-800 rounded-xl">
+                        <p className="text-xs text-gray-400 dark:text-slate-500 font-medium">Belum ada field di section ini.</p>
+                        <button
+                          onClick={() => handleOpenAdd(group.id)}
+                          className="mt-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          + Tambah Field Pertama
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
       </div>
 
-      {/* 2. SIDEBAR KONFIGURASI (KANAN) - KODE SAMA SEPERTI SEBELUMNYA */}
+      {/* 2. SIDEBAR KONFIGURASI (KANAN) */}
       <div
         className={cn(
-          "bg-[#D9D9D9] flex flex-col shadow-2xl z-20 transition-all duration-300 ease-in-out h-full overflow-hidden shrink-0",
-          isConfigOpen ? "w-[400px] border-l border-gray-300 opacity-100" : "w-0 border-none opacity-0"
+          "bg-white dark:bg-slate-900 flex flex-col shadow-2xl z-30 transition-all duration-300 ease-in-out h-full overflow-hidden shrink-0 border-l border-gray-200 dark:border-slate-800",
+          isConfigOpen ? "w-[420px] opacity-100" : "w-0 border-none opacity-0 invisible"
         )}
       >
-        <div className="w-[400px] flex flex-col h-full">
-          <div className="p-5 border-b border-gray-400 flex justify-between items-center bg-[#D9D9D9] shrink-0">
-            <div className="flex items-center gap-2 font-bold text-gray-800">
-              <Settings size={18} />
-              {editingFieldId ? "Edit Field" : "Create Field"}
+        <div className="w-[420px] flex flex-col h-full">
+          <div className="p-6 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 shrink-0 shadow-sm transition-colors">
+            <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-slate-100">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/30"><Settings size={18} /></div>
+              {editingFieldId ? "Edit Konfigurasi" : "Konfigurasi Baru"}
             </div>
-            <button onClick={() => setIsConfigOpen(false)}><X size={24} className="text-gray-600 hover:text-black" /></button>
+            <button onClick={() => setIsConfigOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X size={20} className="text-gray-500 dark:text-slate-400" /></button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50 dark:bg-slate-950/20 custom-scrollbar">
+            {/* Display Type Info */}
+            {selectedType && (
+              <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 flex items-center gap-4 shadow-sm transition-colors">
+                <div className={cn("w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-lg border-b-2 border-black/10", selectedType.color)}>
+                  <selectedType.icon size={24} />
+                </div>
+                <div>
+                  <h5 className="font-bold text-gray-900 dark:text-slate-100 leading-none">{selectedType.title}</h5>
+                  <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1.5 font-medium">{selectedType.desc}</p>
+                </div>
+              </div>
+            )}
 
             {/* Basic Config */}
-            <div className="bg-[#B0B0B0] rounded-lg overflow-hidden border border-gray-400 shadow-sm">
-              <div className="p-3 bg-[#909090] text-white flex justify-between items-center text-sm font-bold">
-                Basic Configuration <ChevronUp size={16} />
-              </div>
-              <div className="p-5 space-y-4 bg-[#B0B0B0]">
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest px-1">Pengaturan Dasar</h4>
+              <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-6 transition-colors">
                 <div>
-                  <label className="text-xs font-bold text-gray-800 block mb-1">Display Name</label>
+                  <label className="text-xs font-bold text-gray-700 dark:text-slate-300 block mb-2 px-1">Display Name</label>
                   <input
                     type="text"
                     value={fieldName}
                     onChange={(e) => setFieldName(e.target.value)}
-                    className="w-full p-2.5 rounded bg-white border-none outline-none focus:ring-2 focus:ring-blue-600 text-sm"
-                    placeholder="e.g. Hero Title"
+                    className="w-full p-3 rounded-lg bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 text-sm font-semibold transition-all text-gray-900 dark:text-slate-100 dark:placeholder:text-slate-700"
+                    placeholder="Contoh: Judul Utama"
                     autoFocus
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-800 block mb-1">API ID</label>
+                  <label className="text-xs font-bold text-gray-700 dark:text-slate-300 block mb-2 px-1">API ID (Unique Key)</label>
                   <input
                     type="text"
                     value={apiId}
                     onChange={(e) => setApiId(e.target.value)}
-                    className="w-full p-2.5 rounded bg-white border-none outline-none text-gray-700 text-sm font-mono"
+                    className="w-full p-3 rounded-lg bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 text-sm font-mono text-gray-900 dark:text-blue-400 transition-all font-bold"
                   />
-                  <p className="text-[10px] text-gray-600 mt-1">Used in API response keys.</p>
+                  <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-medium px-1 italic leading-tight">Digunakan sebagai key pada JSON API response.</p>
                 </div>
               </div>
             </div>
 
             {/* Validation Config */}
-            <div className="bg-[#B0B0B0] rounded-lg overflow-hidden border border-gray-400 shadow-sm">
-              <div className="p-3 bg-[#909090] text-white flex gap-2 items-center text-sm font-bold">
-                <CheckSquare size={16} /> Validation
-              </div>
-              <div className="p-5 space-y-3 bg-[#B0B0B0]">
-                <label className="flex items-center gap-3 cursor-pointer select-none">
-                  <input type="checkbox" checked={isRequired} onChange={e => setIsRequired(e.target.checked)} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
-                  <span className="text-sm font-medium text-gray-800">Required Field</span>
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest px-1">Validasi Data</h4>
+              <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-4 transition-colors">
+                <label className="flex items-center justify-between cursor-pointer group">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-gray-800 dark:text-slate-200 transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">Wajib Diisi (Required)</span>
+                    <span className="text-[10px] text-gray-500 dark:text-slate-500 font-medium">Field tidak boleh dikosongkan.</span>
+                  </div>
+                  <input type="checkbox" checked={isRequired} onChange={e => setIsRequired(e.target.checked)} className="w-5 h-5 rounded border-gray-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 dark:bg-slate-950" />
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer select-none">
-                  <input type="checkbox" checked={isUnique} onChange={e => setIsUnique(e.target.checked)} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
-                  <span className="text-sm font-medium text-gray-800">Unique Value</span>
+                <div className="h-[1px] bg-gray-50 dark:bg-slate-800 w-full" />
+                <label className="flex items-center justify-between cursor-pointer group">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-gray-800 dark:text-slate-200 transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">Nilai Unik (Unique)</span>
+                    <span className="text-[10px] text-gray-500 dark:text-slate-500 font-medium">Menghindari duplikasi nilai field.</span>
+                  </div>
+                  <input type="checkbox" checked={isUnique} onChange={e => setIsUnique(e.target.checked)} className="w-5 h-5 rounded border-gray-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 dark:bg-slate-950" />
                 </label>
               </div>
             </div>
 
-            {/* Relation Config (Only if Relation) */}
+            {/* Relation Config */}
             {selectedType?.slug === 'relation' && (
-              <div className="bg-[#B0B0B0] rounded-lg overflow-hidden border border-gray-400 shadow-sm animate-in slide-in-from-right-2">
-                <div className="p-3 bg-pink-600 text-white flex gap-2 items-center text-sm font-bold">
-                  <LinkIcon size={16} /> Relation Settings
-                </div>
-                <div className="p-5 space-y-4 bg-[#B0B0B0]">
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest px-1">Konfigurasi Relasi</h4>
+                <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-pink-100 dark:border-pink-900/30 shadow-sm space-y-4 transition-colors">
                   <div>
-                    <label className="text-xs font-bold text-gray-800 block mb-1">Target Content Model</label>
+                    <label className="text-xs font-bold text-gray-700 dark:text-slate-300 block mb-2 px-1">Hubungkan Ke Content Model</label>
                     <select
                       value={relationTarget}
                       onChange={(e) => setRelationTarget(e.target.value)}
-                      className="w-full p-2.5 rounded bg-white border-none outline-none focus:ring-2 focus:ring-pink-500 text-sm"
+                      className="w-full p-3 rounded-lg bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-pink-500 dark:focus:ring-pink-600 text-sm font-bold transition-all text-gray-900 dark:text-slate-100"
                     >
-                      <option value="">-- Select Content Model --</option>
+                      <option value="">-- Pilih Model --</option>
                       {allContentTypes.map((ct: any) => (
                         <option key={ct.id} value={ct.id}>{ct.name}</option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-gray-600 mt-1">Which content should be linked here?</p>
                   </div>
                 </div>
               </div>
             )}
-
           </div>
-          <div className="p-6 bg-[#D9D9D9] border-t border-gray-400 shrink-0">
-            <button onClick={handleSave} disabled={isLoading} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
-              {isLoading ? <Loader2 className="animate-spin" size={18} /> : null}
-              {editingFieldId ? "Update Field" : "Save Field"}
+
+          <div className="p-6 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 shrink-0 transition-colors">
+            <button
+              onClick={handleSave}
+              disabled={isLoading}
+              className="w-full py-4 bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-white font-black rounded-xl shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 border-b-2 border-blue-800 dark:border-blue-700"
+            >
+              {isLoading ? <Loader2 className="animate-spin" size={20} /> : null}
+              {editingFieldId ? "Simpan Perubahan" : "Simpan Field Baru"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* MODAL OVERLAY (TETAP DI ATAS SEMUANYA) */}
-      {isTypeModalOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[1px] animate-in fade-in duration-200">
-          <div className="bg-[#D9D9D9] p-6 rounded-lg shadow-2xl w-[650px] animate-in zoom-in-95 duration-200 border border-gray-400">
+      {/* 3. MODALS */}
+
+      {/* Field Group Modal */}
+      {isGroupModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 px-4">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-slate-800">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">Add Field type</h2>
-              <button onClick={() => setIsTypeModalOpen(false)} className="text-gray-600 hover:text-black"><X size={24} /></button>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/30"><FolderPlus size={24} /></div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Create Field Group</h2>
+              </div>
+              <button onClick={() => setIsGroupModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X size={24} className="text-gray-400 dark:text-slate-500" /></button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-gray-500 dark:text-slate-500 block mb-2 uppercase tracking-[0.2em] px-1">Group Name</label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="Contoh: Section Hero, SEO Meta, dsb."
+                  className="w-full p-4 rounded-xl bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 font-bold text-gray-900 dark:text-slate-100 transition-all shadow-inner placeholder:text-gray-300 dark:placeholder:text-slate-700"
+                />
+                <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-4 leading-relaxed italic px-1 font-medium italic">Field Group digunakan untuk mengelompokkan beberapa field agar struktur konten lebih rapi dan mudah dikelola oleh editor.</p>
+              </div>
+              <button
+                onClick={handleSaveGroup}
+                disabled={isLoading || !groupName}
+                className="w-full py-4 bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-white font-black rounded-xl shadow-2xl shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 border-b-2 border-blue-800 dark:border-blue-700"
+              >
+                {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
+                Create Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Field Type Selector Modal */}
+      {isTypeModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 px-4">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl w-full max-w-2xl animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-slate-800 overflow-hidden">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">Pilih Tipe Field</h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 font-medium italic leading-none">Gunakan tipe field yang paling sesuai untuk data Anda.</p>
+              </div>
+              <button onClick={() => setIsTypeModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X size={28} className="text-gray-400 dark:text-slate-500" /></button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto px-1 custom-scrollbar">
               {fieldTypes.map((t) => (
-                <button key={t.slug} onClick={() => handleSelectType(t)} className="flex items-start gap-4 p-4 bg-white rounded-lg border border-transparent hover:border-black hover:shadow-lg transition-all text-left group">
-                  <div className={`w-12 h-12 rounded-md flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm ${t.color}`}><t.icon size={20} /></div>
-                  <div>
-                    <div className="font-bold text-sm text-gray-900">{t.title}</div>
-                    <div className="text-[10px] text-gray-500 leading-tight mt-1">{t.desc}</div>
+                <button
+                  key={t.slug}
+                  onClick={() => handleSelectType(t)}
+                  className="flex items-center gap-4 p-4 bg-white dark:bg-slate-950 rounded-xl border-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-xl hover:-translate-y-1 transition-all text-left group shadow-sm bg-slate-50/50 dark:bg-slate-900/50 active:scale-95"
+                >
+                  <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg border-b-2 border-black/10", t.color)}>
+                    <t.icon size={28} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-gray-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight truncate">{t.title}</div>
+                    <div className="text-[10px] text-gray-500 dark:text-slate-500 leading-tight mt-1.5 font-bold uppercase tracking-tight">{t.desc}</div>
+                  </div>
+                  <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-slate-800 flex items-center justify-center text-gray-300 dark:text-slate-700 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/40 group-hover:text-blue-500 dark:group-hover:text-blue-400 group-hover:border-blue-200 dark:group-hover:border-blue-800 transition-all shrink-0">
+                    <ChevronUp size={16} className="rotate-90" />
                   </div>
                 </button>
               ))}

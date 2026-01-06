@@ -4,14 +4,15 @@ import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
 // --- 1. FUNGSI UNTUK MEMBUAT HALAMAN BARU ---
-export async function createNewPage(data: { name: string, slug: string, projectId: string }) {
+export async function createNewPage(data: { name: string, slug: string, projectId: string, hasSeo?: boolean }) {
   try {
     const page = await prisma.builderContentType.create({
       data: {
         name: data.name,
         slug: data.slug,
         projectId: data.projectId,
-        type: "single", // Default type for "Page"
+        type: "SINGLE", // Gunakan uppercase agar konsisten dengan create-type-modal
+        hasSeo: data.hasSeo || false,
       }
     })
 

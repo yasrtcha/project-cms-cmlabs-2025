@@ -157,7 +157,6 @@ model Project {
   members             ProjectMember[]
   contentTypes        ContentType[]
   builderContentTypes BuilderContentType[]
-  apiTokens            ApiToken[]
 
   @@unique([organizationId, slug])
   @@index([ownerId])
@@ -432,26 +431,4 @@ model BuilderField {
   updatedAt DateTime @updatedAt
 
   @@index([fieldGroupId])
-}
-model ApiToken {
-  id          String    @id @default(cuid())
-  name        String    // Contoh: "Website Frontend Token"
-  description String?
-  token       String    @unique // Kunci rahasia (misal: cm_12345xyz...)
-  
-  // Hak Akses
-  role        String    @default("public") // public, read_write, full_access
-  permissions Json?     // Opsional: Jika ingin custom permission
-  
-  // Validitas
-  expiresAt   DateTime? // null = Never expires
-  lastUsedAt  DateTime?
-  
-  projectId   String
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([projectId])
 }

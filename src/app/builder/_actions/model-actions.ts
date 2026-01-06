@@ -6,7 +6,7 @@ import { ContentModelData } from "@/types/content-model"
 
 export async function saveContentModel(projectId: string, data: ContentModelData, modelId?: string) {
     try {
-        // Check if slug is unique within project
+
         const existing = await prisma.builderContentType.findFirst({
             where: {
                 projectId,
@@ -18,9 +18,6 @@ export async function saveContentModel(projectId: string, data: ContentModelData
         if (existing) {
             return { success: false, error: "A model with this slug already exists in this project" };
         }
-
-        // Prepare field groups data
-        // We'll create a default "Main Content" group with all fields
         const fieldGroupData = {
             name: "Main Content",
             order: 0,

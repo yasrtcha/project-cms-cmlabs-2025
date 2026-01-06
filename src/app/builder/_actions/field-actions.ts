@@ -13,6 +13,7 @@ const CreateFieldSchema = z.object({
   type: z.string().min(1),
   pageId: z.string().min(1),
   projectId: z.string().min(1),
+  fieldGroupId: z.string().optional(),
 });
 
 const UpdateFieldSchema = z.object({
@@ -31,7 +32,7 @@ const UpdateFieldSchema = z.object({
 // ----------------------------------------------------------------------
 export async function createNewField(params: z.infer<typeof CreateFieldSchema>) {
   try {
-    const { name, type, pageId, projectId } = CreateFieldSchema.parse(params);
+    const { name, type, pageId, projectId, fieldGroupId } = CreateFieldSchema.parse(params);
 
     // 1. Generate API ID (clean slug)
     const apiId = name.toLowerCase()
@@ -40,34 +41,40 @@ export async function createNewField(params: z.infer<typeof CreateFieldSchema>) 
       .replace(/[\s_-]+/g, '_')
       .replace(/^-+|-+$/g, '');
 
-    // 2. Cari Group "Main Content" (Default group)
-    let group = await prisma.builderFieldGroup.findFirst({
-      where: { contentTypeId: pageId, name: "Main Content" }
-    });
+    // 2. Tentukan Group
+    let groupId = fieldGroupId;
 
-    if (!group) {
-      // Fallback: cari group apapun atau buat baru
-      const existingGroup = await prisma.builderFieldGroup.findFirst({
-        where: { contentTypeId: pageId }
+    if (!groupId) {
+      // Cari Group "Main Content" (Default group)
+      let group = await prisma.builderFieldGroup.findFirst({
+        where: { contentTypeId: pageId, name: "Main Content" }
       });
 
-      if (existingGroup) {
-        group = existingGroup;
-      } else {
-        group = await prisma.builderFieldGroup.create({
-          data: {
-            name: "Main Content",
-            contentTypeId: pageId,
-            order: 0
-          }
+      if (!group) {
+        // Fallback: cari group apapun atau buat baru
+        const existingGroup = await prisma.builderFieldGroup.findFirst({
+          where: { contentTypeId: pageId }
         });
+
+        if (existingGroup) {
+          group = existingGroup;
+        } else {
+          group = await prisma.builderFieldGroup.create({
+            data: {
+              name: "Main Content",
+              contentTypeId: pageId,
+              order: 0
+            }
+          });
+        }
       }
+      groupId = group.id;
     }
 
     // 3. Simpan ke Database
     // Hitung order terakhir
     const lastField = await prisma.builderField.findFirst({
-      where: { fieldGroupId: group.id },
+      where: { fieldGroupId: groupId },
       orderBy: { order: 'desc' }
     });
     const newOrder = lastField ? lastField.order + 1 : 0;
@@ -77,7 +84,7 @@ export async function createNewField(params: z.infer<typeof CreateFieldSchema>) 
         name,
         apiId,
         type,
-        fieldGroupId: group.id,
+        fieldGroupId: groupId as string,
         order: newOrder,
         isRequired: false,
         isUnique: false
