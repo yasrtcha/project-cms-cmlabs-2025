@@ -9,7 +9,7 @@ datasource db {
 }
 
 // ============================================================================
-// USER & AUTHENTICATION
+// 1. USER & AUTHENTICATION
 // ============================================================================
 
 model User {
@@ -27,8 +27,8 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // OAuth Relations
-  accounts Account[]
-  sessions Session[]
+  accounts      Account[]
+  sessions      Session[]
 
   // Organization Relations
   ownedOrganizations  Organization[]       @relation("OrganizationOwner")
@@ -38,7 +38,7 @@ model User {
   ownedProjects  Project[]       @relation("ProjectOwner")
   projectMembers ProjectMember[]
 
-  // Content Relations
+  // Content Relations (Authoring)
   contentEntries ContentEntry[]
 }
 
@@ -89,12 +89,12 @@ model PasswordResetToken {
 }
 
 // ============================================================================
-// ORGANIZATION
+// 2. ORGANIZATION
 // ============================================================================
 
 model Organization {
   id          String   @id @default(cuid())
-  shortId     String   @unique // 6 karakter unik untuk display (e.g., "A1B2C3")
+  shortId     String   @unique // 6 karakter unik untuk display
   name        String
   slug        String   @unique
   description String?
@@ -132,12 +132,12 @@ model OrganizationMember {
 }
 
 // ============================================================================
-// PROJECT
+// 3. PROJECT
 // ============================================================================
 
 model Project {
   id           String  @id @default(cuid())
-  shortId      String  @unique // 6 karakter unik untuk display (e.g., "A1B2C3")
+  shortId      String  @unique // 6 karakter unik untuk display
   name         String
   slug         String
   description  String?
@@ -146,16 +146,17 @@ model Project {
 
   // Ownership
   ownerId        String
-  organizationId String? // null = Personal Project, ada = Organizational Project
+  organizationId String? // null = Personal Project
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  owner               User                 @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  organization        Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  members             ProjectMember[]
-  contentTypes        ContentType[]
+  owner          User                 @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  organization   Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        ProjectMember[]
+  
+  // Relasi ke Builder Content Type (Sistem Baru)
   builderContentTypes BuilderContentType[]
 
   @@unique([organizationId, slug])
@@ -184,17 +185,17 @@ model ProjectMember {
 }
 
 // ============================================================================
-// ROLES & PERMISSIONS
+// 4. ROLES & PERMISSIONS
 // ============================================================================
 
 model Role {
   id          String   @id @default(cuid())
-  name        String // Super Admin, Admin, Editor, SEO Manager, Viewer
-  slug        String // super-admin, admin, editor, seo-manager, viewer
+  name        String   // Super Admin, Admin, Editor, etc
+  slug        String
   description String?
-  color       String? // Untuk badge color (blue, yellow, green, dll)
-  isSystem    Boolean  @default(false) // true = role bawaan, tidak bisa dihapus
-  projectId   String? // null = global role, ada = custom role per project
+  color       String?
+  isSystem    Boolean  @default(false)
+  projectId   String?  // null = global role
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -209,7 +210,7 @@ model Role {
 model RolePermission {
   id        String  @id @default(cuid())
   roleId    String
-  module    String // content, media, seo, settings, users, projects
+  module    String  // content, media, seo, settings, etc
   canCreate Boolean @default(false)
   canRead   Boolean @default(false)
   canUpdate Boolean @default(false)
@@ -223,167 +224,28 @@ model RolePermission {
 }
 
 // ============================================================================
-// CONTENT MANAGEMENT
+// 5. CONTENT BUILDER (STRUCTURE SCHEMA)
 // ============================================================================
-
-// Content Type (Blog, Product, Landing Page, dll)
-model ContentType {
-  id           String   @id @default(cuid())
-  projectId    String
-  name         String // "Blog Post", "Product", "Home Page"
-  slug         String // "blog-post", "product", "home-page"
-  description  String?
-  type         String   @default("multiple") // single, multiple
-  hasSeo       Boolean  @default(false)
-  hasWorkflow  Boolean  @default(false)
-  hasMultiLang Boolean  @default(false)
-  order        Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relations
-  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  fieldGroups FieldGroup[]
-  entries     ContentEntry[]
-
-  @@unique([projectId, slug])
-  @@index([projectId])
-}
-
-// Field Group (untuk mengelompokkan fields)
-model FieldGroup {
-  id            String   @id @default(cuid())
-  contentTypeId String
-  name          String // "Hero Section", "SEO Settings"
-  order         Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  contentType ContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
-  fields      Field[]
-
-  @@index([contentTypeId])
-}
-
-// Field Definition
-model Field {
-  id           String  @id @default(cuid())
-  fieldGroupId String
-  name         String // "Title", "Hero Image"
-  slug         String // "title", "hero-image"
-  type         String // text, richtext, number, date, image, boolean, relation, select
-  description  String?
-  placeholder  String?
-  defaultValue String?
-  order        Int     @default(0)
-
-  // Validation
-  isRequired Boolean @default(false)
-  isUnique   Boolean @default(false)
-  minLength  Int?
-  maxLength  Int?
-  min        Float?
-  max        Float?
-
-  // Options (untuk select, multiselect)
-  options Json? // ["Option 1", "Option 2"] atau [{value, label}]
-
-  // Relation Config (jika type = "relation")
-  relationType  String? // one-to-one, one-to-many, many-to-many
-  relatedTypeId String? // ID ContentType yang direlasikan
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  fieldGroup FieldGroup   @relation(fields: [fieldGroupId], references: [id], onDelete: Cascade)
-  values     FieldValue[]
-
-  @@unique([fieldGroupId, slug])
-  @@index([fieldGroupId])
-}
-
-// Content Entry (Instance dari Content Type)
-model ContentEntry {
-  id            String    @id @default(cuid())
-  contentTypeId String
-  status        String    @default("draft") // draft, pending, approved, published
-  locale        String    @default("en") // untuk multi-language
-  createdById   String
-  publishedAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // SEO Fields
-  seoTitle       String?
-  seoDescription String?
-  seoKeywords    String?
-  seoSlug        String?
-
-  // Relations
-  contentType   ContentType       @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
-  createdBy     User              @relation(fields: [createdById], references: [id])
-  fieldValues   FieldValue[]
-  relationsFrom ContentRelation[] @relation("FromEntry")
-  relationsTo   ContentRelation[] @relation("ToEntry")
-
-  @@index([contentTypeId])
-  @@index([createdById])
-  @@index([status])
-}
-
-// Field Values (Data aktual per entry)
-model FieldValue {
-  id      String  @id @default(cuid())
-  entryId String
-  fieldId String
-  value   String? // JSON string untuk semua tipe data
-  locale  String  @default("en")
-
-  // Relations
-  entry ContentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  field Field        @relation(fields: [fieldId], references: [id], onDelete: Cascade)
-
-  @@unique([entryId, fieldId, locale])
-  @@index([entryId])
-  @@index([fieldId])
-}
-
-// Content Relations (untuk relation fields)
-model ContentRelation {
-  id          String @id @default(cuid())
-  fromEntryId String
-  toEntryId   String
-  fieldId     String
-  order       Int    @default(0)
-
-  // Relations
-  fromEntry ContentEntry @relation("FromEntry", fields: [fromEntryId], references: [id], onDelete: Cascade)
-  toEntry   ContentEntry @relation("ToEntry", fields: [toEntryId], references: [id], onDelete: Cascade)
-
-  @@unique([fromEntryId, toEntryId, fieldId])
-  @@index([fromEntryId])
-  @@index([toEntryId])
-}
 
 model BuilderContentType {
   id          String  @id @default(cuid())
-  name        String // Contoh: "Home", "Blog Post", "SEO Card"
-  slug        String // Contoh: "home", "blog-post"
-  type        String // "SINGLE", "COLLECTION", "COMPONENT"
+  name        String
+  slug        String
+  type        String  // "SINGLE", "COLLECTION", "COMPONENT"
   description String?
 
-  hasSeo       Boolean  @default(false)
-  hasWorkflow  Boolean  @default(false)
-  hasMultiLang Boolean  @default(false)
+  hasSeo       Boolean @default(false)
+  hasWorkflow  Boolean @default(false)
+  hasMultiLang Boolean @default(false)
 
   projectId String
-  // Pastikan Anda menambahkan relasi "builderContentTypes BuilderContentType[]" di model Project nanti
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  // Pengelompokan field (agar bisa bikin Group seperti di desain)
+  // Pengelompokan field
   fieldGroups BuilderFieldGroup[]
+  
+  // Relasi ke Data Konten (Isi)
+  contentEntries ContentEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -392,11 +254,10 @@ model BuilderContentType {
   @@index([projectId])
 }
 
-// 2. Field Group: Pengelompokan field (misal: "Header Section", "SEO Settings")
 model BuilderFieldGroup {
-  id    String @id @default(cuid())
-  name  String
-  order Int    @default(0)
+  id            String @id @default(cuid())
+  name          String
+  order         Int    @default(0)
 
   contentTypeId String
   contentType   BuilderContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
@@ -406,15 +267,13 @@ model BuilderFieldGroup {
   @@index([contentTypeId])
 }
 
-// 3. Field: Definisi inputan (Text, Media, Relation, dll)
-// Ini menggantikan model "PageField" yang lama
 model BuilderField {
-  id    String @id @default(cuid())
-  name  String // Label: "Hero Title"
-  apiId String // ID untuk API: "hero_title"
-  type  String // text, media, number, date, location, relation
+  id      String @id @default(cuid())
+  name    String // Label: "Hero Title"
+  apiId   String // API Key: "hero_title"
+  type    String // text, media, relation, etc
 
-  // Validasi (Sesuai dokumen requirements Anda)
+  // Validasi
   isRequired Boolean @default(false)
   isUnique   Boolean @default(false)
 
@@ -422,8 +281,7 @@ model BuilderField {
   fieldGroupId String
   fieldGroup   BuilderFieldGroup @relation(fields: [fieldGroupId], references: [id], onDelete: Cascade)
 
-  // Config tambahan (disimpan sebagai JSON agar fleksibel untuk masa depan)
-  // Contoh: { "maxLength": 100, "relationTo": "blog_post_id" }
+  // Config tambahan (disimpan sebagai JSON)
   options Json?
 
   order     Int      @default(0)
@@ -431,4 +289,35 @@ model BuilderField {
   updatedAt DateTime @updatedAt
 
   @@index([fieldGroupId])
+}
+
+// ============================================================================
+// 6. CONTENT ENTRY (DATA STORAGE - JSON)
+// ============================================================================
+
+model ContentEntry {
+  id            String   @id @default(cuid())
+  
+  // Data utama disimpan sebagai JSON dinamis
+  data          Json     @default("{}")
+  
+  // Data SEO terpisah
+  seoData       Json?    @default("{}")
+  
+  // Status Publikasi
+  status        String   @default("DRAFT") // DRAFT, PUBLISHED, ARCHIVED
+  
+  // Relasi ke Struktur Builder
+  contentTypeId String
+  contentType   BuilderContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
+
+  // Relasi ke Penulis (User)
+  createdById   String?
+  createdBy     User?    @relation(fields: [createdById], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([contentTypeId])
+  @@index([createdById])
 }
