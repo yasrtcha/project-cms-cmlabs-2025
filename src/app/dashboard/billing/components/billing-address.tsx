@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 // Mock data - will be replaced with API data
@@ -12,13 +12,33 @@ const mockBillingAddress = {
   state: "East Java",
   zipCode: "6748453",
   address: "Candi V streets no.687",
-  company: "East Java",
+  company: "CMLABS",
 };
 
-export function BillingAddress() {
+interface BillingAddressProps {
+  addressData?: any;
+}
+
+export function BillingAddress({ addressData }: BillingAddressProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(mockBillingAddress);
+
+  useEffect(() => {
+    // Only update if addressData is provided (meaning we might be coming from checkout)
+    if (addressData && addressData.fullName !== null) {
+      setFormData({
+        fullName: addressData.fullName ?? mockBillingAddress.fullName,
+        email: addressData.email ?? mockBillingAddress.email,
+        country: addressData.country ?? mockBillingAddress.country,
+        city: addressData.city ?? mockBillingAddress.city,
+        state: addressData.state ?? mockBillingAddress.state,
+        zipCode: addressData.zipCode ?? mockBillingAddress.zipCode,
+        address: addressData.address ?? mockBillingAddress.address,
+        company: addressData.company ?? mockBillingAddress.company,
+      });
+    }
+  }, [addressData]);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -57,128 +77,94 @@ export function BillingAddress() {
       </div>
 
       {/* Content */}
-      <div className="p-6">
+      <div className="p-8">
         <div className="space-y-4">
           {/* Row 1: Full Name */}
           <div className="flex items-center">
-            <label className="w-44 text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">
+            <label className="w-40 text-sm font-bold text-slate-800 dark:text-slate-200">
               Full Name
             </label>
-            <span className="text-gray-400 mx-3">:</span>
-            {isEditing ? (
-              <InputField value={formData.fullName} field="fullName" />
-            ) : (
-              <DisplayValue value={formData.fullName} />
-            )}
+            <span className="text-slate-400 mr-8">:</span>
+            <div className="flex-1 bg-slate-50 dark:bg-slate-900/40 px-4 py-2 rounded border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300">
+              {formData.fullName}
+            </div>
           </div>
 
           {/* Row 2: Billing Email */}
           <div className="flex items-center">
-            <label className="w-44 text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">
+            <label className="w-40 text-sm font-bold text-slate-800 dark:text-slate-200">
               Billing Email
             </label>
-            <span className="text-gray-400 mx-3">:</span>
-            {isEditing ? (
-              <InputField value={formData.email} field="email" />
-            ) : (
-              <DisplayValue value={formData.email} muted />
-            )}
+            <span className="text-slate-400 mr-8">:</span>
+            <div className="flex-1 bg-slate-50 dark:bg-slate-900/40 px-4 py-2 rounded border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300">
+              {formData.email}
+            </div>
           </div>
 
           {/* Row 3: Country */}
           <div className="flex items-center">
-            <label className="w-44 text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">
+            <label className="w-40 text-sm font-bold text-slate-800 dark:text-slate-200">
               Country
             </label>
-            <span className="text-gray-400 mx-3">:</span>
-            {isEditing ? (
-              <InputField value={formData.country} field="country" />
-            ) : (
-              <DisplayValue value={formData.country} />
-            )}
-          </div>
-
-          {/* Row 4: City & ZIP */}
-          <div className="flex items-center">
-            <label className="w-44 text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">
-              City
-            </label>
-            <span className="text-gray-400 mx-3">:</span>
-            <div className="flex-1 flex items-center">
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => handleChange("city", e.target.value)}
-                  className="w-48 px-3 py-1.5 border-b border-gray-300 dark:border-slate-600 bg-transparent text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
-                />
-              ) : (
-                <span className="w-48 text-sm text-gray-900 dark:text-white">{formData.city}</span>
-              )}
-              
-              <label className="text-sm font-medium text-gray-900 dark:text-white ml-8">
-                ZIP
-              </label>
-              <span className="text-gray-400 mx-3">:</span>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={formData.zipCode}
-                  onChange={(e) => handleChange("zipCode", e.target.value)}
-                  className="w-32 px-3 py-1.5 border-b border-gray-300 dark:border-slate-600 bg-transparent text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
-                />
-              ) : (
-                <span className="text-sm text-gray-900 dark:text-white">{formData.zipCode}</span>
-              )}
+            <span className="text-slate-400 mr-8">:</span>
+            <div className="flex-1 bg-slate-50 dark:bg-slate-900/40 px-4 py-2 rounded border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300">
+              {formData.country}
             </div>
           </div>
 
-          {/* Row 5: State / Province & Address */}
-          <div className="flex items-center">
-            <label className="w-44 text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">
-              State / Province
-            </label>
-            <span className="text-gray-400 mx-3">:</span>
+          {/* Row 4: City & ZIP */}
+          <div className="flex items-center gap-6">
             <div className="flex-1 flex items-center">
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={formData.state}
-                  onChange={(e) => handleChange("state", e.target.value)}
-                  className="w-48 px-3 py-1.5 border-b border-gray-300 dark:border-slate-600 bg-transparent text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
-                />
-              ) : (
-                <span className="w-48 text-sm text-gray-900 dark:text-white">{formData.state}</span>
-              )}
-              
-              <label className="text-sm font-medium text-gray-900 dark:text-white ml-8">
+              <label className="w-40 text-sm font-bold text-slate-800 dark:text-slate-200 flex-shrink-0">
+                City
+              </label>
+              <span className="text-slate-400 mr-8">:</span>
+              <div className="flex-1 bg-slate-50 dark:bg-slate-900/40 px-4 py-2 rounded border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300">
+                {formData.city}
+              </div>
+            </div>
+            <div className="flex-1 flex items-center">
+              <label className="w-16 text-sm font-bold text-slate-800 dark:text-slate-200 flex-shrink-0">
+                ZIP
+              </label>
+              <span className="text-slate-400 mr-4">:</span>
+              <div className="flex-1 bg-slate-50 dark:bg-slate-900/40 px-4 py-2 rounded border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300">
+                {formData.zipCode}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 5: State & Address */}
+          <div className="flex items-center gap-6">
+            <div className="flex-1 flex items-center">
+              <label className="w-40 text-sm font-bold text-slate-800 dark:text-slate-200 flex-shrink-0">
+                State / Province
+              </label>
+              <span className="text-slate-400 mr-8">:</span>
+              <div className="flex-1 bg-slate-50 dark:bg-slate-900/40 px-4 py-2 rounded border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300">
+                {formData.state}
+              </div>
+            </div>
+            <div className="flex-1 flex items-center">
+              <label className="w-16 text-sm font-bold text-slate-800 dark:text-slate-200 flex-shrink-0">
                 Address
               </label>
-              <span className="text-gray-400 mx-3">:</span>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => handleChange("address", e.target.value)}
-                  className="flex-1 px-3 py-1.5 border-b border-gray-300 dark:border-slate-600 bg-transparent text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
-                />
-              ) : (
-                <span className="text-sm text-gray-900 dark:text-white">{formData.address}</span>
-              )}
+              <span className="text-slate-400 mr-4">:</span>
+              <div className="flex-1 bg-slate-50 dark:bg-slate-900/40 px-4 py-2 rounded border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300">
+                {formData.address}
+              </div>
             </div>
           </div>
 
           {/* Row 6: Company */}
           <div className="flex items-center">
-            <label className="w-44 text-sm font-medium text-gray-900 dark:text-white flex-shrink-0">
+            <label className="w-40 text-sm font-bold text-slate-800 dark:text-slate-200">
               Company (Optional)
             </label>
-            <span className="text-gray-400 mx-3">:</span>
-            {isEditing ? (
-              <InputField value={formData.company} field="company" />
-            ) : (
-              <DisplayValue value={formData.company} />
-            )}
+            <span className="text-slate-400 mr-8">:</span>
+            <div className="flex-1 bg-slate-50 dark:bg-slate-900/40 px-4 py-2 rounded border border-slate-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300">
+              {formData.company}
+            </div>
           </div>
         </div>
 

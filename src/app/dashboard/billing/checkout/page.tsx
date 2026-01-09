@@ -9,9 +9,9 @@ import Link from "next/link";
 
 // Plan data
 const plansData: Record<string, { name: string; price: number; currency: string }> = {
-  free: { name: "Free / Demo", price: 0, currency: "USD" },
-  professional: { name: "Professional Plan", price: 150, currency: "USD" },
-  enterprise: { name: "Enterprise Plan", price: 500, currency: "USD" },
+  free: { name: "Free / Demo", price: 0, currency: "Rupiah" },
+  professional: { name: "Professional Plan", price: 2000000, currency: "Rupiah" },
+  enterprise: { name: "Enterprise Plan", price: 7500000, currency: "Rupiah" },
 };
 
 // Payment methods
@@ -39,7 +39,7 @@ export default function CheckoutPage() {
   const [billingAddress, setBillingAddress] = useState({
     fullName: "",
     email: "",
-    country: "Indonesia",
+    country: "",
     city: "",
     state: "",
     zipCode: "",
@@ -55,27 +55,49 @@ export default function CheckoutPage() {
   };
 
   const handlePurchase = async () => {
-    if (!selectedPayment || !agreedToTerms) return;
+    // For paid plans, require payment method. For free, only terms.
+    const canProceed = plan.price === 0 ? agreedToTerms : (selectedPayment && agreedToTerms);
+    if (!canProceed) return;
 
     setLoading(true);
-    // Simulate API call - will be replaced with Xendit integration
+    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    // Redirect to success page or Xendit payment page
-    alert("Payment integration with Xendit will be implemented here!");
+
+    // Redirect with data
+    const addressParams = new URLSearchParams({
+      success: "true",
+      planId: planId,
+      fullName: billingAddress.fullName,
+      email: billingAddress.email,
+      country: billingAddress.country,
+      city: billingAddress.city,
+      zipCode: billingAddress.zipCode,
+      state: billingAddress.state,
+      address: billingAddress.address,
+      company: billingAddress.company,
+    }).toString();
+
+    if (plan.price === 0) {
+      alert("Free plan activated successfully!");
+    } else {
+      alert("Payment integration with Xendit will be implemented here!");
+    }
+
+    router.push(`/dashboard/billing?${addressParams}`);
     setLoading(false);
   };
 
   const isFormValid = () => {
-    return (
+    const isBillingValid =
       billingAddress.fullName &&
       billingAddress.email &&
       billingAddress.country &&
       billingAddress.city &&
       billingAddress.address &&
-      selectedPayment &&
-      agreedToTerms
-    );
+      agreedToTerms;
+
+    if (plan.price === 0) return isBillingValid;
+    return isBillingValid && selectedPayment;
   };
 
   return (
@@ -225,46 +247,48 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Payment Methods */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-                  <div className="bg-blue-50 dark:bg-slate-700/50 px-6 py-3 border-b border-gray-200 dark:border-slate-700">
-                    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-                      Payment Method
-                    </h2>
-                  </div>
-                  <div className="p-6 space-y-3">
-                    {paymentMethods.map((method) => (
-                      <button
-                        key={method.id}
-                        onClick={() => setSelectedPayment(method.id)}
-                        className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
-                          selectedPayment === method.id
+                {/* Payment Methods - Only show for paid plans */}
+                {plan.price > 0 && (
+                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+                    <div className="bg-blue-50 dark:bg-slate-700/50 px-6 py-3 border-b border-gray-200 dark:border-slate-700">
+                      <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+                        Payment Method
+                      </h2>
+                    </div>
+                    <div className="p-6 space-y-3">
+                      {paymentMethods.map((method) => (
+                        <button
+                          key={method.id}
+                          onClick={() => setSelectedPayment(method.id)}
+                          className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${selectedPayment === method.id
                             ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                             : "border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500"
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                            selectedPayment === method.id
-                              ? "bg-blue-500 text-white"
-                              : "bg-green-100 text-green-600"
-                          }`}>
-                            <method.icon size={24} />
+                            }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-10 bg-green-500 rounded flex items-center justify-center flex-shrink-0">
+                              <span className="text-[10px] font-bold text-white uppercase">Logo</span>
+                            </div>
+                            <div className="text-left font-sans">
+                              <p className="font-bold text-slate-800 dark:text-white text-base">
+                                {method.name}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-left">
-                            <p className="font-medium text-gray-900 dark:text-white">
-                              {method.name}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {method.description}
-                            </p>
-                          </div>
-                        </div>
-                        <ChevronRight className="text-gray-400" size={20} />
-                      </button>
-                    ))}
+                          <ChevronRight className="text-gray-400" size={24} />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {plan.price === 0 && (
+                  <div className="p-6 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                      Note: You are activating the Free / Demo plan. No payment method is required. Please verify your billing address details to continue.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Right Column - Order Summary */}
@@ -283,11 +307,11 @@ export default function CheckoutPage() {
                           {plan.name}
                         </p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          ${plan.price} / month
+                          Rp {plan.price.toLocaleString('id-ID')} / month
                         </p>
                       </div>
                       <p className="font-medium text-gray-900 dark:text-white">
-                        ${plan.price}
+                        Rp {plan.price.toLocaleString('id-ID')}
                       </p>
                     </div>
 
@@ -297,7 +321,7 @@ export default function CheckoutPage() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => setMonths(Math.max(1, months - 1))}
-                          className="w-8 h-8 rounded-lg border border-gray-300 dark:border-slate-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-slate-700"
+                          className="w-8 h-8 rounded-lg border border-gray-300 dark:text-white dark:border-slate-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-slate-700"
                         >
                           <Minus size={16} />
                         </button>
@@ -306,7 +330,7 @@ export default function CheckoutPage() {
                         </span>
                         <button
                           onClick={() => setMonths(months + 1)}
-                          className="w-8 h-8 rounded-lg border border-gray-300 dark:border-slate-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-slate-700"
+                          className="w-8 h-8 rounded-lg border border-gray-300 dark:text-white dark:border-slate-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-slate-700"
                         >
                           <Plus size={16} />
                         </button>
@@ -317,7 +341,7 @@ export default function CheckoutPage() {
                     <div className="flex justify-between py-3 border-t border-gray-200 dark:border-slate-700">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Subtotal</span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        ${subtotal}
+                        Rp {subtotal.toLocaleString('id-ID')}
                       </span>
                     </div>
 
@@ -325,7 +349,7 @@ export default function CheckoutPage() {
                     <div className="flex justify-between py-3 border-t border-gray-200 dark:border-slate-700">
                       <span className="font-semibold text-gray-900 dark:text-white">Total</span>
                       <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                        ${total}
+                        Rp {total.toLocaleString('id-ID')}
                       </span>
                     </div>
 
@@ -344,11 +368,10 @@ export default function CheckoutPage() {
                     <div className="flex items-start gap-3 pt-4">
                       <button
                         onClick={() => setAgreedToTerms(!agreedToTerms)}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          agreedToTerms
-                            ? "bg-blue-500 border-blue-500"
-                            : "border-gray-300 dark:border-slate-600"
-                        }`}
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${agreedToTerms
+                          ? "bg-blue-500 border-blue-500"
+                          : "border-gray-300 dark:border-slate-600"
+                          }`}
                       >
                         {agreedToTerms && <Check size={14} className="text-white" />}
                       </button>
@@ -368,9 +391,14 @@ export default function CheckoutPage() {
                     <button
                       onClick={handlePurchase}
                       disabled={!isFormValid() || loading}
-                      className="w-full py-3 bg-[#1E3A5F] hover:bg-[#2a4a73] text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full py-4 bg- hover:bg-blue-500 text-white font-bold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20"
                     >
-                      {loading ? "Processing..." : "Purchase"}
+                      {loading
+                        ? "Processing..."
+                        : plan.price === 0
+                          ? "Activate Plan"
+                          : "Purchase"
+                      }
                     </button>
 
                     {/* Back Link */}

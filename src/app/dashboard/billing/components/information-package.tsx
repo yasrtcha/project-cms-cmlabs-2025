@@ -4,112 +4,114 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 
 interface InformationPackageProps {
+  planId?: string;
   onUpgrade: () => void;
 }
 
-// Mock data - will be replaced with API data
-const mockSubscription = {
-  plan: "Professional",
-  status: "active",
-  price: 150,
-  currency: "USD",
-  subscriptionEndDate: "12 Dec 2025",
-  autoRenewal: true,
+const plansMap: Record<string, any> = {
+  free: {
+    name: "Free / Demo",
+    price: 0,
+    status: "active",
+    subscriptionEndDate: "No Expiry",
+  },
+  professional: {
+    name: "Professional Plan",
+    price: 2000000,
+    status: "active",
+    subscriptionEndDate: "12 Dec 2025",
+  },
+  enterprise: {
+    name: "Enterprise Plan",
+    price: 7500000,
+    status: "active",
+    subscriptionEndDate: "12 Dec 2025",
+  },
 };
 
-export function InformationPackage({ onUpgrade }: InformationPackageProps) {
-  const [autoRenewal, setAutoRenewal] = useState(mockSubscription.autoRenewal);
+export function InformationPackage({ planId = "professional", onUpgrade }: InformationPackageProps) {
+  const currentPlan = plansMap[planId] || plansMap.professional;
+  const [autoRenewal, setAutoRenewal] = useState(true);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
         return (
-          <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
+          <span className="bg-[#3A7AC3] text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
             Active
           </span>
         );
-      case "expired":
-        return (
-          <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
-            Expired
-          </span>
-        );
-      case "cancelled":
-        return (
-          <span className="bg-gray-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
-            Cancelled
-          </span>
-        );
       default:
-        return null;
+        return (
+          <span className="bg-gray-400 text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+            {status}
+          </span>
+        );
     }
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-blue-200 dark:border-slate-700 overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-blue-200 dark:border-slate-700 overflow-hidden flex flex-col items-stretch h-full">
       {/* Header */}
-      <div className="bg-blue-50 dark:bg-slate-700/50 px-6 py-3 border-b border-blue-200 dark:border-slate-700">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+      <div className="bg-[#F1F5F9] dark:bg-slate-700/50 px-6 py-2 border-b border-blue-200 dark:border-slate-700">
+        <h2 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-tight">
           Information Package
         </h2>
       </div>
 
       {/* Content */}
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                {mockSubscription.plan}
+      <div className="p-6 flex flex-col h-full">
+        <div className="flex justify-between items-start mb-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                {currentPlan.name}
               </h3>
-              {getStatusBadge(mockSubscription.status)}
+              {getStatusBadge(currentPlan.status)}
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Subscription end date{" "}
-              <span className="text-blue-500">{mockSubscription.subscriptionEndDate}</span>
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">
-              ${mockSubscription.price}
-            </div>
-          </div>
-        </div>
 
-        {/* Auto Renewal */}
-        <div className="flex items-start gap-3 mb-6">
-          <button
-            onClick={() => setAutoRenewal(!autoRenewal)}
-            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-              autoRenewal
-                ? "bg-blue-500 border-blue-500"
-                : "border-gray-300 dark:border-slate-600"
-            }`}
-          >
-            {autoRenewal && <Check size={14} className="text-white" />}
-          </button>
-          <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Auto Renewal
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setAutoRenewal(!autoRenewal)}
+                className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${autoRenewal
+                  ? "bg-white border-slate-400"
+                  : "bg-white border-slate-300"
+                  }`}
+              >
+                {autoRenewal && <div className="w-2.5 h-2.5 bg-slate-600 rounded-sm" />}
+              </button>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Auto Renewal
+              </span>
+            </div>
+
+            <p className="text-[9px] text-slate-400 dark:text-slate-500 leading-tight max-w-[220px]">
               Enable to automatically renew your subscription at the end of each billing cycle using your saved payment method.
             </p>
+          </div>
+
+          <div className="text-right">
+            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mb-6">
+              Subscription end date <span className="text-blue-400 font-bold">{currentPlan.subscriptionEndDate}</span>
+            </p>
+            <div className="text-5xl font-bold text-slate-800 dark:text-white tracking-tighter">
+              Rp {currentPlan.price.toLocaleString('id-ID')}
+            </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3">
-          <button className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+        <div className="mt-auto flex flex-wrap gap-3 pt-4">
+          <button className="px-5 py-2 bg-[#A0AEC0] text-white text-[10px] font-bold rounded-lg hover:bg-slate-500 transition-all uppercase tracking-wider">
             Pay package
           </button>
           <button
             onClick={onUpgrade}
-            className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors"
+            className="px-5 py-2 bg-[#68D391] text-white text-[10px] font-bold rounded-lg hover:bg-green-500 transition-all uppercase tracking-wider"
           >
             Upgrade Package
           </button>
-          <button className="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">
+          <button className="px-5 py-2 bg-[#F56565] text-white text-[10px] font-bold rounded-lg hover:bg-red-600 transition-all uppercase tracking-wider">
             Cancel Package
           </button>
         </div>
