@@ -73,7 +73,7 @@ export const ActivitiesTable = memo(function ActivitiesTable() {
         </div>
         <Button className="bg-blue-600 dark:text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
           <Plus className="w-4 h-4" />
-          New Activitiess
+          New Activitiesss
         </Button>
       </CardHeader>
       <CardContent>
