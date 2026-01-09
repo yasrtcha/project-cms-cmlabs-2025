@@ -6,11 +6,11 @@ import { deletePage } from "@/app/builder/_actions/page-actions";
 import { createNewField, reorderFields, updateField, deleteField } from "@/app/builder/_actions/field-actions";
 import { createFieldGroup, deleteFieldGroup } from "@/app/builder/_actions/group-actions";
 import {
-  MoreVertical, Trash2, FileText, FolderPlus, Plus, X, Type,
-  Image as ImageIcon, Hash, Calendar, MapPin, Layers, Link as LinkIcon, Loader2, Menu, Settings, ChevronUp, ChevronDown, CheckSquare, Layout
+  MoreVertical, Trash2, FolderPlus, Plus, X, Type,
+  Image as ImageIcon, Hash, Calendar, MapPin, Layers, Link as LinkIcon, Loader2, Menu, Settings, ChevronUp, Layout // <-- SUDAH DITAMBAHKAN
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 const fieldTypes = [
   { slug: "text", icon: Type, title: "Text Field", color: "bg-purple-600", desc: "Short or long texts, titles, etc." },
@@ -30,7 +30,7 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
 
-  const [selectedType, setSelectedType] = useState<any>(null); // TypeDef object
+  const [selectedType, setSelectedType] = useState<any>(null);
   const [fieldName, setFieldName] = useState("");
   const [apiId, setApiId] = useState("");
   const [groupName, setGroupName] = useState("");
@@ -46,7 +46,7 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
   // Validation & Options State
   const [isRequired, setIsRequired] = useState(false);
   const [isUnique, setIsUnique] = useState(false);
-  const [relationTarget, setRelationTarget] = useState(""); // For Relation Field
+  const [relationTarget, setRelationTarget] = useState("");
 
   // State lokal untuk list field groups
   const [fieldGroups, setFieldGroups] = useState<any[]>([]);
@@ -58,7 +58,7 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
     }
   }, [initialData]);
 
-  // Auto-generate API ID when name changes (only for new fields)
+  // Auto-generate API ID
   useEffect(() => {
     if (!editingFieldId && fieldName) {
       const generated = fieldName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '_');
@@ -95,7 +95,6 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
     setIsRequired(field.isRequired || false);
     setIsUnique(field.isUnique || false);
 
-    // Parse options for relation
     let options = {};
     if (typeof field.options === 'string') {
       try { options = JSON.parse(field.options); } catch (e) { }
@@ -173,10 +172,6 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
         });
 
         if (result.success) {
-          // If we had a target group, we need to move it (or the action should handle it)
-          // For now, our action puts it in "Main Content" by default. 
-          // We might need to update field actions to accept groupId.
-
           if (selectedType.slug === 'relation' && relationTarget) {
             await updateField({
               fieldId: result.data!.id,
@@ -210,15 +205,43 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
   };
 
   // --- LOGIKA DRAG AND DROP ---
-  const onDragEnd = async (result: any) => {
+  const onDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
-    const { source, destination, draggableId, type } = result;
+    if (result.source.droppableId === result.destination.droppableId && result.source.index === result.destination.index) return;
 
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+    // Clone state groups
+    const newFieldGroups = [...fieldGroups];
+    
+    // Cari group asal dan tujuan
+    const sourceGroupIndex = newFieldGroups.findIndex(g => g.id === result.source.droppableId);
+    
+    if (sourceGroupIndex === -1) return;
 
-    // TODO: Reorder Logic for groups vs fields
-    // This is more complex now with multiple groups.
-    // For now, let's just keep it simple or implement reorder within same group.
+    const group = { ...newFieldGroups[sourceGroupIndex] };
+    const newFields = [...group.fields]; // Clone fields
+
+    // Pindahkan item di array lokal
+    const [movedField] = newFields.splice(result.source.index, 1);
+    newFields.splice(result.destination.index, 0, movedField);
+
+    // Update urutan 'order' secara lokal
+    const updatedFields = newFields.map((field, index) => ({
+      ...field,
+      order: index
+    }));
+
+    group.fields = updatedFields;
+    newFieldGroups[sourceGroupIndex] = group;
+
+    setFieldGroups(newFieldGroups); // Optimistic Update
+
+    // Simpan ke database
+    const itemsToReorder = updatedFields.map((f) => ({
+      id: f.id,
+      order: f.order
+    }));
+
+    await reorderFields(itemsToReorder, projectId);
   };
 
   return (
@@ -264,108 +287,131 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
           </div>
         </div>
 
-        {/* CONTENT AREA */}
+        {/* CONTENT AREA (DROP CONTEXT) */}
         <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
           <div className="max-w-5xl mx-auto space-y-8">
-
-            {fieldGroups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900/50 border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm">
-                <Layout className="text-gray-300 dark:text-slate-700 mb-4" size={48} />
-                <h3 className="font-bold text-lg text-gray-800 dark:text-slate-200">Mulai Membangun Struktur</h3>
-                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Buat Field Group pertama Anda untuk mengelompokkan field.</p>
-                <button
-                  onClick={() => setIsGroupModalOpen(true)}
-                  className="mt-6 flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
-                >
-                  Buat Section Baru
-                </button>
-              </div>
-            ) : (
-              fieldGroups.map((group: any) => (
-                <div key={group.id} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden group/section transition-all hover:shadow-md">
-                  {/* Group Header */}
-                  <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 font-bold border border-blue-200/50 dark:border-blue-800/30">
-                        <Layers size={18} />
+            <DragDropContext onDragEnd={onDragEnd}>
+              {fieldGroups.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900/50 border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                  <Layout className="text-gray-300 dark:text-slate-700 mb-4" size={48} />
+                  <h3 className="font-bold text-lg text-gray-800 dark:text-slate-200">Mulai Membangun Struktur</h3>
+                  <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Buat Field Group pertama Anda untuk mengelompokkan field.</p>
+                  <button
+                    onClick={() => setIsGroupModalOpen(true)}
+                    className="mt-6 flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+                  >
+                    Buat Section Baru
+                  </button>
+                </div>
+              ) : (
+                fieldGroups.map((group: any) => (
+                  <div key={group.id} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden group/section transition-all hover:shadow-md">
+                    {/* Group Header */}
+                    <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 font-bold border border-blue-200/50 dark:border-blue-800/30">
+                          <Layers size={18} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-900 dark:text-slate-100">{group.name}</h3>
+                          <p className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-widest">{group.fields?.length || 0} Fields</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900 dark:text-slate-100">{group.name}</h3>
-                        <p className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-widest">{group.fields?.length || 0} Fields</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover/section:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleOpenAdd(group.id)}
-                        className="p-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors flex items-center gap-1.5 text-xs font-bold"
-                      >
-                        <Plus size={14} /> Add Field
-                      </button>
-                      <button
-                        onClick={() => handleDeleteGroup(group.id)}
-                        className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 rounded-md transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Fields List */}
-                  <div className="p-4 bg-white dark:bg-slate-900 space-y-2">
-                    {group.fields && group.fields.length > 0 ? (
-                      group.fields.map((field: any) => {
-                        const typeDef = fieldTypes.find(t => t.slug === field.type) || fieldTypes[0];
-                        return (
-                          <div
-                            key={field.id}
-                            onClick={() => handleEditClick(field)}
-                            className="flex items-center justify-between p-3.5 rounded-xl border border-gray-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition-all cursor-pointer group"
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className="cursor-grab p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Menu size={16} className="text-gray-400 dark:text-slate-600" />
-                              </div>
-                              <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm border-b-2 border-black/10", typeDef.color)}>
-                                <typeDef.icon size={18} />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-sm">
-                                  {field.name} {field.isRequired && <span className="text-red-500">*</span>}
-                                </h4>
-                                <p className="text-[10px] text-gray-500 dark:text-slate-500 font-bold uppercase tracking-tight">
-                                  {field.apiId} • {field.type}
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteFieldClick(field.id); }}
-                              className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        )
-                      })
-                    ) : (
-                      <div className="py-8 text-center border-2 border-dashed border-gray-100 dark:border-slate-800 rounded-xl">
-                        <p className="text-xs text-gray-400 dark:text-slate-500 font-medium">Belum ada field di section ini.</p>
+                      <div className="flex items-center gap-2 opacity-0 group-hover/section:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleOpenAdd(group.id)}
-                          className="mt-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                          className="p-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors flex items-center gap-1.5 text-xs font-bold"
                         >
-                          + Tambah Field Pertama
+                          <Plus size={14} /> Add Field
+                        </button>
+                        <button
+                          onClick={() => handleDeleteGroup(group.id)}
+                          className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 rounded-md transition-colors"
+                        >
+                          <Trash2 size={14} />
                         </button>
                       </div>
-                    )}
+                    </div>
+
+                    {/* AREA DROPPABLE */}
+                    <Droppable droppableId={group.id} type="FIELD">
+                      {(provided) => (
+                        <div 
+                          className="p-4 bg-white dark:bg-slate-900 space-y-2 min-h-[50px]"
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                        >
+                          {group.fields && group.fields.length > 0 ? (
+                            group.fields.map((field: any, index: number) => {
+                              const typeDef = fieldTypes.find(t => t.slug === field.type) || fieldTypes[0];
+                              return (
+                                <Draggable key={field.id} draggableId={field.id} index={index}>
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      onClick={() => handleEditClick(field)}
+                                      style={{ ...provided.draggableProps.style }}
+                                      className={cn(
+                                        "flex items-center justify-between p-3.5 rounded-xl border border-gray-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition-all cursor-pointer group bg-white dark:bg-slate-900",
+                                        snapshot.isDragging && "shadow-xl ring-2 ring-blue-500 border-transparent z-50 opacity-90 scale-105"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-4">
+                                        <div 
+                                          {...provided.dragHandleProps}
+                                          className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-gray-400 dark:text-slate-600"
+                                        >
+                                          <Menu size={16} />
+                                        </div>
+                                        
+                                        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm border-b-2 border-black/10", typeDef.color)}>
+                                          <typeDef.icon size={18} />
+                                        </div>
+                                        <div>
+                                          <h4 className="font-bold text-gray-900 dark:text-slate-100 text-sm">
+                                            {field.name} {field.isRequired && <span className="text-red-500">*</span>}
+                                          </h4>
+                                          <p className="text-[10px] text-gray-500 dark:text-slate-500 font-bold uppercase tracking-tight">
+                                            {field.apiId} • {field.type}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteFieldClick(field.id); }}
+                                        className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              )
+                            })
+                          ) : (
+                            <div className="py-8 text-center border-2 border-dashed border-gray-100 dark:border-slate-800 rounded-xl">
+                              <p className="text-xs text-gray-400 dark:text-slate-500 font-medium">Belum ada field di section ini.</p>
+                              <button
+                                onClick={() => handleOpenAdd(group.id)}
+                                className="mt-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                + Tambah Field Pertama
+                              </button>
+                            </div>
+                          )}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </DragDropContext>
           </div>
         </div>
       </div>
 
-      {/* 2. SIDEBAR KONFIGURASI (KANAN) */}
+      {/* 2. SIDEBAR KONFIGURASI (KANAN) - Tetap sama, tidak berubah */}
       <div
         className={cn(
           "bg-white dark:bg-slate-900 flex flex-col shadow-2xl z-30 transition-all duration-300 ease-in-out h-full overflow-hidden shrink-0 border-l border-gray-200 dark:border-slate-800",
@@ -382,7 +428,6 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50 dark:bg-slate-950/20 custom-scrollbar">
-            {/* Display Type Info */}
             {selectedType && (
               <div className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 flex items-center gap-4 shadow-sm transition-colors">
                 <div className={cn("w-12 h-12 rounded-lg flex items-center justify-center text-white shadow-lg border-b-2 border-black/10", selectedType.color)}>
@@ -395,7 +440,6 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
               </div>
             )}
 
-            {/* Basic Config */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest px-1">Pengaturan Dasar</h4>
               <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-6 transition-colors">
@@ -423,7 +467,6 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
               </div>
             </div>
 
-            {/* Validation Config */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest px-1">Validasi Data</h4>
               <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm space-y-4 transition-colors">
@@ -445,7 +488,6 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
               </div>
             </div>
 
-            {/* Relation Config */}
             {selectedType?.slug === 'relation' && (
               <div className="space-y-4">
                 <h4 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest px-1">Konfigurasi Relasi</h4>
@@ -482,8 +524,6 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
       </div>
 
       {/* 3. MODALS */}
-
-      {/* Field Group Modal */}
       {isGroupModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 px-4">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-slate-800">
@@ -520,7 +560,6 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
         </div>
       )}
 
-      {/* Field Type Selector Modal */}
       {isTypeModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 px-4">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl w-full max-w-2xl animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-slate-800 overflow-hidden">
