@@ -5,7 +5,7 @@ export default function ContentBuilderWelcome() {
     <div className="h-full w-full flex items-center justify-center p-10 bg-white dark:bg-slate-950">
       <div className="max-w-4xl w-full bg-gray-200 dark:bg-slate-900 p-12 rounded-lg">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          Content Builder
+          Content Builderr
         </h1>
         <h2 className="text-xl font-medium text-gray-800 dark:text-gray-200 mb-6">
           Build your first layout.
