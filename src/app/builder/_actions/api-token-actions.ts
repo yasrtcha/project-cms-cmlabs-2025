@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import crypto from "crypto"
 
-// Fungsi Generate Token Unik
 function generateToken() {
   return 'cm_' + crypto.randomBytes(16).toString('hex');
 }

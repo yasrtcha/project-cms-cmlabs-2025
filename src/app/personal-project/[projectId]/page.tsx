@@ -37,7 +37,7 @@ function formatRelativeTime(dateString: string): string {
   if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-  
+
   return date.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "short",
@@ -344,9 +344,9 @@ export default function PersonalProjectDetailPage() {
           </div>
 
           {/* 2. CUSTOM DOMAIN CARD */}
-          <div className="border border-yellow-400 rounded-lg overflow-hidden mb-8">
-            <div className="bg-yellow-400 px-6 py-3">
-              <h2 className="text-gray-900 font-semibold">Custom Domain</h2>
+          <div className="border border-blue-200 dark:border-blue-900/30 rounded-lg overflow-hidden mb-8">
+            <div className="bg-[#3A7AC3] px-6 py-3">
+              <h2 className="text-white font-semibold">Custom Domain</h2>
             </div>
             <div className="bg-white dark:bg-slate-800 p-6">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
@@ -356,7 +356,7 @@ export default function PersonalProjectDetailPage() {
                 <div className="flex-1 w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
                   {project.customDomain || defaultDomain}
                 </div>
-                <button onClick={() => setShowDomainModal(true)} className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium px-6 py-2 rounded-md transition-colors w-full md:w-auto">
+                <button onClick={() => setShowDomainModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-md transition-colors w-full md:w-auto dark:bg-blue-500 dark:hover:bg-blue-600">
                   Custom Domain
                 </button>
               </div>
@@ -402,7 +402,7 @@ export default function PersonalProjectDetailPage() {
           </div>
           <div className="flex justify-end gap-3">
             <button onClick={() => setShowNameModal(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
-            <button onClick={handleUpdateName} disabled={actionLoading || !newName.trim()} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2">
+            <button onClick={handleUpdateName} disabled={actionLoading || !newName.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600">
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}Save
             </button>
           </div>
@@ -421,7 +421,7 @@ export default function PersonalProjectDetailPage() {
           </div>
           <div className="flex justify-end gap-3">
             <button onClick={() => setShowStatusModal(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
-            <button onClick={handleUpdateStatus} disabled={actionLoading} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2">
+            <button onClick={handleUpdateStatus} disabled={actionLoading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600">
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}Save
             </button>
           </div>
@@ -438,7 +438,7 @@ export default function PersonalProjectDetailPage() {
           </div>
           <div className="flex justify-end gap-3">
             <button onClick={() => setShowDomainModal(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
-            <button onClick={handleUpdateDomain} disabled={actionLoading} className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 disabled:opacity-50 flex items-center gap-2">
+            <button onClick={handleUpdateDomain} disabled={actionLoading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600">
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}Save
             </button>
           </div>
@@ -451,7 +451,7 @@ export default function PersonalProjectDetailPage() {
           <p className="text-gray-600 dark:text-gray-400">Create a copy of "{project.name}"?</p>
           <div className="flex justify-end gap-3">
             <button onClick={() => setShowDuplicateModal(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
-            <button onClick={handleDuplicate} disabled={actionLoading} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2">
+            <button onClick={handleDuplicate} disabled={actionLoading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600">
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}Duplicate
             </button>
           </div>

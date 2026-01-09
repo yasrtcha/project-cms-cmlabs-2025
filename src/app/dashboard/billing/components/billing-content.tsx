@@ -42,9 +42,9 @@ export function BillingContent() {
       <BillingHistory />
 
       {/* Choose Plan Modal */}
-      <ChoosePlanModal 
-        isOpen={showPlanModal} 
-        onClose={() => setShowPlanModal(false)} 
+      <ChoosePlanModal
+        isOpen={showPlanModal}
+        onClose={() => setShowPlanModal(false)}
       />
     </div>
   );

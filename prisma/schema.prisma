@@ -40,6 +40,10 @@ model User {
 
   // Content Relations
   contentEntries ContentEntry[]
+
+  // Billing Relations
+  subscriptions Subscription[]
+  invoices      Invoice[]
 }
 
 model Account {
@@ -86,6 +90,136 @@ model PasswordResetToken {
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+// ============================================================================
+// PLANS & BILLING
+// ============================================================================
+
+enum PlanTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+  PAUSED
+}
+
+model Plan {
+  id          String   @id @default(cuid())
+  name        String   // "Free", "Starter", "Professional", "Enterprise"
+  tier        PlanTier @unique
+  description String?
+  price       Int      // Price in cents (0 for free)
+  
+  // Feature Limits (null = unlimited)
+  maxPersonalProjects      Int?
+  maxOrganizations         Int?
+  maxOrgProjects           Int?
+  maxTeamMembersPerOrg     Int?
+  maxContentEntriesPerProject Int?
+  maxCustomDomains         Int?
+  maxApiCallsPerMonth      Int?
+  maxMediaStorageMB        Int?
+  maxContentTypesPerProject Int?
+  maxLocalizations         Int?
+  auditLogRetentionDays    Int      @default(7)
+  
+  // Features
+  hasCustomDomains Boolean  @default(false)
+  hasLocalization  Boolean  @default(false)
+  hasWhiteLabel    Boolean  @default(false)
+  supportLevel     String   @default("community") // community, email, priority, dedicated
+  
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String
+  planId           String
+  status           SubscriptionStatus @default(TRIALING)
+  
+  // Billing
+  stripeCustomerId       String? @unique
+  stripeSubscriptionId   String? @unique
+  stripePriceId          String?
+  
+  // Lifecycle
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean  @default(false)
+  canceledAt         DateTime?
+  trialStart         DateTime?
+  trialEnd           DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan  Plan @relation(fields: [planId], references: [id])
+  usage Usage[]
+  
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+}
+
+model Usage {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  
+  // Usage Metrics
+  personalProjectsCount     Int @default(0)
+  organizationsCount        Int @default(0)
+  orgProjectsCount          Int @default(0)
+  apiCallsMonth             Int @default(0)
+  mediaStorageUsedMB        Int @default(0)
+  
+  // Period tracking
+  periodStart DateTime
+  periodEnd   DateTime
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  @@index([subscriptionId])
+  @@index([periodStart, periodEnd])
+}
+
+model Invoice {
+  id               String   @id @default(cuid())
+  userId           String
+  subscriptionId   String?
+  
+  amount           Int      // Amount in cents
+  currency         String   @default("USD")
+  status           String   // paid, pending, failed
+  
+  stripeInvoiceId  String?  @unique
+  invoiceNumber    String?
+  invoiceUrl       String?
+  
+  paidAt           DateTime?
+  createdAt        DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([status])
 }
 
 // ============================================================================

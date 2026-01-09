@@ -21,7 +21,7 @@ const activities: Activity[] = [
   },
   {
     name: "Create Login Page UI",
-    date: "Sep 20", 
+    date: "Sep 20",
     status: "completed"
   },
   {
@@ -71,7 +71,7 @@ export const ActivitiesTable = memo(function ActivitiesTable() {
             Stay organized and boost your productivity
           </p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
+        <Button className="bg-blue-600 dark:text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
           <Plus className="w-4 h-4" />
           New Activities
         </Button>

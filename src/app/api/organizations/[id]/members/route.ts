@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
     const { id } = await params
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
     const { id } = await params
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }

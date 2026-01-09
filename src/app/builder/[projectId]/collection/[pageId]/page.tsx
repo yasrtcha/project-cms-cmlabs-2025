@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-// Kita import Client Component yang sudah canggih tadi
 import SinglePageBuilderClient from "../../single-page/[pageId]/SinglePageBuilderClient"; 
 
 export default async function CollectionBuilderPage({ 
@@ -10,14 +9,13 @@ export default async function CollectionBuilderPage({
 }) {
   const { projectId, pageId } = await params;
 
-  // 1. Ambil data Content Type
   const pageData = await prisma.builderContentType.findUnique({
     where: { id: pageId },
     include: {
       fieldGroups: {
         include: {
           fields: {
-            orderBy: { order: 'asc' } // Pastikan urutan sesuai Drag & Drop
+            orderBy: { order: 'asc' } 
           }
         },
         orderBy: { order: 'asc' }
@@ -27,7 +25,6 @@ export default async function CollectionBuilderPage({
 
   if (!pageData) return notFound();
 
-  // 2. Render Builder yang sama
   return (
     <SinglePageBuilderClient 
       initialData={pageData} 

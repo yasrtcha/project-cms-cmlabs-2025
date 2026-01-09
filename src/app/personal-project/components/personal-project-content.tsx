@@ -48,7 +48,7 @@ function formatRelativeTime(dateString: string): string {
   if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-  
+
   return date.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "short",
@@ -59,19 +59,19 @@ function formatRelativeTime(dateString: string): string {
 }
 
 // Modal Component
-function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  title: string; 
+function Modal({
+  isOpen,
+  onClose,
+  title,
+  children
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
   children: React.ReactNode;
 }) {
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -92,12 +92,12 @@ export default function PersonalProjectPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  
+
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  
+
   // Form states
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
@@ -110,7 +110,7 @@ export default function PersonalProjectPage() {
       setLoading(true);
       const res = await fetch(`/api/personal-projects?search=${encodeURIComponent(search)}`);
       const data = await res.json();
-      
+
       if (data.success) {
         setProjects(data.data);
       }
@@ -128,21 +128,21 @@ export default function PersonalProjectPage() {
   // Create project
   const handleCreate = async () => {
     if (!newProjectName.trim()) return;
-    
+
     setActionLoading(true);
     setActionError(null);
-    
+
     try {
       const res = await fetch("/api/personal-projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           name: newProjectName.trim(),
           description: newProjectDesc.trim() || null
         })
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setShowCreateModal(false);
         setNewProjectName("");
@@ -161,16 +161,16 @@ export default function PersonalProjectPage() {
   // Delete project
   const handleDelete = async () => {
     if (!selectedProject) return;
-    
+
     setActionLoading(true);
     setActionError(null);
-    
+
     try {
       const res = await fetch(`/api/personal-projects/${selectedProject.id}`, {
         method: "DELETE"
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setShowDeleteModal(false);
         setSelectedProject(null);
@@ -210,9 +210,9 @@ export default function PersonalProjectPage() {
                 />
               </div>
 
-              <button 
+              <button
                 onClick={() => setShowCreateModal(true)}
-                className="bg-yellow-400 text-gray-900 font-semibold px-5 py-2.5 rounded-lg hover:bg-yellow-500 transition-colors flex items-center gap-2"
+                className="bg-blue-600 text-white dark:text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
                 <Plus size={18} />
                 Create Project
@@ -237,7 +237,7 @@ export default function PersonalProjectPage() {
                 </p>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                 >
                   Create Project
                 </button>
@@ -278,12 +278,11 @@ export default function PersonalProjectPage() {
                           </div>
                         </td>
                         <td className="p-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                            project.status === "progress" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${project.status === "progress" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
                             project.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
-                            project.status === "completed" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" :
-                            "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-                          }`}>
+                              project.status === "completed" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" :
+                                "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+                            }`}>
                             {project.status}
                           </span>
                         </td>
@@ -363,7 +362,7 @@ export default function PersonalProjectPage() {
             <button
               onClick={handleCreate}
               disabled={actionLoading || !newProjectName.trim()}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               Create

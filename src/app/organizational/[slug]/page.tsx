@@ -11,7 +11,7 @@ import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 // Badge untuk role di project
 const RoleBadge = ({ role }: { role: { name: string; color: string | null } | null }) => {
   if (!role) return null;
-  
+
   const colorMap: Record<string, string> = {
     blue: "bg-blue-500",
     indigo: "bg-indigo-500",
@@ -19,7 +19,7 @@ const RoleBadge = ({ role }: { role: { name: string; color: string | null } | nu
     green: "bg-green-500",
     gray: "bg-gray-500",
   };
-  
+
   return (
     <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${colorMap[role.color || "blue"] || "bg-blue-500"}`}>
       {role.name}
@@ -85,7 +85,7 @@ export default function OrganizationalDetailPage() {
 
   const { organization, loading: orgLoading } = useOrganization(slug);
   const { projects, loading: projectsLoading, createProject, deleteProject, refetch } = useOrganizationProjects(slug);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -116,9 +116,9 @@ export default function OrganizationalDetailPage() {
             className="w-full pl-10 pr-4 py-3 bg-gray-100 dark:bg-slate-800 dark:text-white border-none rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
-        <button 
+        <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold px-6 py-3 rounded-md transition-colors flex items-center"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-md transition-colors flex items-center dark:bg-blue-500 dark:hover:bg-blue-600"
         >
           Create Project
         </button>
@@ -139,9 +139,9 @@ export default function OrganizationalDetailPage() {
             {searchQuery ? "No projects found matching your search." : "No projects yet in this organization."}
           </p>
           {!searchQuery && (
-            <button 
+            <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-yellow-400 text-gray-900 font-semibold px-5 py-2 rounded-lg hover:bg-yellow-500 transition-colors"
+              className="bg-blue-600 text-white font-semibold px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               Create your first project
             </button>
@@ -192,7 +192,7 @@ export default function OrganizationalDetailPage() {
 
                   <td className="p-4 text-center">
                     <div className="flex items-center justify-center space-x-4">
-                      <button 
+                      <button
                         onClick={() => setDeleteTarget({ id: project.id, name: project.name })}
                         className="text-red-500 hover:text-red-700 transition-colors"
                       >

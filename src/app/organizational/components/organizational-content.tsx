@@ -14,9 +14,8 @@ const StatusBadge = ({ status }: { status: string }) => {
   const isOwner = status === "owner";
   return (
     <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize ${
-        isOwner ? "bg-teal-100 text-teal-800" : "bg-yellow-100 text-yellow-800"
-      }`}>
+      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize ${isOwner ? "bg-teal-100 text-teal-800" : "bg-yellow-100 text-yellow-800"
+        }`}>
       {status}
     </span>
   );
@@ -101,9 +100,9 @@ export default function OrganizationalContent() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-700 bg-transparent dark:text-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button 
+            <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-yellow-400 text-gray-900 font-semibold px-5 py-2 rounded-lg hover:bg-yellow-500 transition-colors"
+              className="bg-blue-600 text-white dark:text-white font-semibold px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Create Organizational
             </button>
@@ -121,7 +120,7 @@ export default function OrganizationalContent() {
           {error && (
             <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-red-600 dark:text-red-400">{error}</p>
-              <button 
+              <button
                 onClick={() => refetch()}
                 className="mt-2 text-sm text-red-600 dark:text-red-400 underline"
               >
@@ -137,9 +136,9 @@ export default function OrganizationalContent() {
                 {searchQuery ? "No organizations found matching your search." : "You don't have any organizations yet."}
               </p>
               {!searchQuery && (
-                <button 
+                <button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-yellow-400 text-gray-900 font-semibold px-5 py-2 rounded-lg hover:bg-yellow-500 transition-colors"
+                  className="bg-blue-600 text-white dark:text-white font-semibold px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Create your first organization
                 </button>
@@ -185,14 +184,14 @@ export default function OrganizationalContent() {
                       <td className="p-4 whitespace-nowrap">
                         <div className="flex items-center space-x-5">
                           {(org as any).userRole === "owner" && (
-                            <button 
+                            <button
                               onClick={() => setDeleteTarget({ id: org.id, name: org.name })}
                               className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500"
                             >
                               <Trash2 size={20} />
                             </button>
                           )}
-                          <Link 
+                          <Link
                             href={`/organizational/${org.slug}`}
                             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                           >

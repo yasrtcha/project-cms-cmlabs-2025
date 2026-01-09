@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/contexts/theme-context";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-  display: 'swap', // Optimize font loading
+  display: 'swap', 
   preload: true,
   fallback: ['system-ui', 'arial'],
 });
@@ -15,7 +15,7 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-  display: 'swap', // Optimize font loading
+  display: 'swap', 
   preload: true,
   fallback: ['monospace'],
 });

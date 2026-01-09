@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     if (!body.name?.trim()) {
       return NextResponse.json({ success: false, error: "Organization name is required" }, { status: 400 })
     }
-    
+
     // Generate unique slug
     let slug = generateSlug(body.name)
     let slugExists = await prisma.organization.findUnique({ where: { slug } })

@@ -13,7 +13,7 @@ export default function CollaboratorPage() {
 
   const { organization } = useOrganization(slug);
   const { members, loading, inviteMember, removeMember, refetch } = useOrganizationMembers(slug);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ userId: string; name: string } | null>(null);
@@ -47,9 +47,9 @@ export default function CollaboratorPage() {
           />
         </div>
         {isOwner && (
-          <button 
+          <button
             onClick={() => setShowInviteModal(true)}
-            className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold px-6 py-3 rounded-md transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-md transition-colors dark:bg-blue-500 dark:hover:bg-blue-600"
           >
             Add Collaborator
           </button>
@@ -96,9 +96,9 @@ export default function CollaboratorPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {member.user.image ? (
-                          <img 
-                            src={member.user.image} 
-                            alt="" 
+                          <img
+                            src={member.user.image}
+                            alt=""
                             className="w-8 h-8 rounded-full object-cover"
                           />
                         ) : (
@@ -117,9 +117,8 @@ export default function CollaboratorPage() {
                       </div>
 
                       <span
-                        className={`px-4 py-1 rounded-full text-xs font-semibold text-white capitalize ${
-                          member.role === "owner" ? "bg-[#3A7AC3]" : "bg-yellow-400"
-                        }`}
+                        className={`px-4 py-1 rounded-full text-xs font-semibold text-white capitalize ${member.role === "owner" ? "bg-[#3A7AC3]" : "bg-yellow-400"
+                          }`}
                       >
                         {member.role}
                       </span>
@@ -127,11 +126,10 @@ export default function CollaboratorPage() {
                   </td>
 
                   <td className="p-4 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                      member.status === "active" 
-                        ? "bg-green-100 text-green-800" 
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${member.status === "active"
+                        ? "bg-green-100 text-green-800"
                         : "bg-yellow-100 text-yellow-800"
-                    }`}>
+                      }`}>
                       {member.status}
                     </span>
                   </td>
@@ -143,7 +141,7 @@ export default function CollaboratorPage() {
                   <td className="p-4 text-center">
                     <div className="flex items-center justify-center gap-3">
                       {member.status === "pending" && isOwner && (
-                        <button 
+                        <button
                           className="text-blue-500 hover:text-blue-700 transition-colors"
                           title="Resend invitation"
                         >
@@ -151,7 +149,7 @@ export default function CollaboratorPage() {
                         </button>
                       )}
                       {member.role !== "owner" && isOwner && (
-                        <button 
+                        <button
                           onClick={() => setDeleteTarget({ userId: member.userId, name: member.user.name || "this member" })}
                           className="text-red-500 hover:text-red-700 transition-colors"
                         >

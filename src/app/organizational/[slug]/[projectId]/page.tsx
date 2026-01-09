@@ -44,7 +44,7 @@ function formatRelativeTime(dateString: string): string {
   if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-  
+
   return date.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "short",
@@ -55,19 +55,19 @@ function formatRelativeTime(dateString: string): string {
 }
 
 // Modal Component
-function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  title: string; 
+function Modal({
+  isOpen,
+  onClose,
+  title,
+  children
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
   children: React.ReactNode;
 }) {
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -93,14 +93,14 @@ export default function ProjectSettingsPage() {
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Modal states
   const [showNameModal, setShowNameModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showDomainModal, setShowDomainModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  
+
   // Form states
   const [newName, setNewName] = useState("");
   const [newStatus, setNewStatus] = useState("");
@@ -115,7 +115,7 @@ export default function ProjectSettingsPage() {
       setLoading(true);
       const res = await fetch(`/api/projects/${projectId}`);
       const data = await res.json();
-      
+
       if (data.success && data.data) {
         setProject(data.data);
         setNewName(data.data.name);
@@ -138,10 +138,10 @@ export default function ProjectSettingsPage() {
   // Update project name
   const handleUpdateName = async () => {
     if (!newName.trim()) return;
-    
+
     setActionLoading(true);
     setActionError(null);
-    
+
     try {
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "PUT",
@@ -149,7 +149,7 @@ export default function ProjectSettingsPage() {
         body: JSON.stringify({ name: newName.trim() })
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setProject(prev => prev ? { ...prev, name: newName.trim() } : null);
         setShowNameModal(false);
@@ -169,7 +169,7 @@ export default function ProjectSettingsPage() {
   const handleUpdateStatus = async () => {
     setActionLoading(true);
     setActionError(null);
-    
+
     try {
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "PUT",
@@ -177,7 +177,7 @@ export default function ProjectSettingsPage() {
         body: JSON.stringify({ status: newStatus })
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setProject(prev => prev ? { ...prev, status: newStatus } : null);
         setShowStatusModal(false);
@@ -197,7 +197,7 @@ export default function ProjectSettingsPage() {
   const handleUpdateDomain = async () => {
     setActionLoading(true);
     setActionError(null);
-    
+
     try {
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "PUT",
@@ -205,7 +205,7 @@ export default function ProjectSettingsPage() {
         body: JSON.stringify({ customDomain: newDomain.trim() || null })
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setProject(prev => prev ? { ...prev, customDomain: newDomain.trim() || null } : null);
         setShowDomainModal(false);
@@ -225,13 +225,13 @@ export default function ProjectSettingsPage() {
   const handleDelete = async () => {
     setActionLoading(true);
     setActionError(null);
-    
+
     try {
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "DELETE"
       });
       const data = await res.json();
-      
+
       if (data.success) {
         router.push(`/organizational/${slug}`);
       } else {
@@ -248,18 +248,18 @@ export default function ProjectSettingsPage() {
   const handleDuplicate = async () => {
     setActionLoading(true);
     setActionError(null);
-    
+
     try {
       const res = await fetch(`/api/organizations/${slug}/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           name: `${project?.name} (Copy)`,
           description: project?.description
         })
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setShowDuplicateModal(false);
         setActionSuccess("Project duplicated successfully");
@@ -280,7 +280,7 @@ export default function ProjectSettingsPage() {
   const handleDuplicateToPersonal = async () => {
     setActionLoading(true);
     setActionError(null);
-    
+
     try {
       const res = await fetch("/api/personal-projects/duplicate", {
         method: "POST",
@@ -288,7 +288,7 @@ export default function ProjectSettingsPage() {
         body: JSON.stringify({ sourceProjectId: project?.id })
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setActionSuccess("Project duplicated to Personal Projects!");
         setTimeout(() => {
@@ -391,7 +391,7 @@ export default function ProjectSettingsPage() {
               <span className="text-sm text-gray-900 dark:text-white font-mono">
                 {project.shortId || project.id.substring(0, 6).toUpperCase()}
               </span>
-              <button 
+              <button
                 onClick={() => navigator.clipboard.writeText(project.id)}
                 className="text-gray-400 hover:text-gray-600 p-1"
                 title="Copy full ID"
@@ -410,7 +410,7 @@ export default function ProjectSettingsPage() {
               <span className="text-sm text-gray-900 dark:text-white">
                 {project.name}
               </span>
-              <button 
+              <button
                 onClick={() => setShowNameModal(true)}
                 className="text-[#3A7AC3] text-sm hover:underline font-medium"
               >
@@ -438,7 +438,7 @@ export default function ProjectSettingsPage() {
               <span className={`${getStatusColor(project.status)} text-white text-xs px-3 py-1 rounded-md font-medium shadow-sm capitalize`}>
                 {project.status}
               </span>
-              <button 
+              <button
                 onClick={() => setShowStatusModal(true)}
                 className="text-[#3A7AC3] text-sm hover:underline font-medium"
               >
@@ -460,9 +460,9 @@ export default function ProjectSettingsPage() {
       </div>
 
       {/* 2. CUSTOM DOMAIN CARD */}
-      <div className="border border-yellow-400/50 rounded-lg overflow-hidden mb-8">
-        <div className="bg-yellow-400 px-6 py-3">
-          <h2 className="text-gray-900 font-medium">Custom Domain</h2>
+      <div className="border border-blue-200 dark:border-blue-900/30 rounded-lg overflow-hidden mb-8">
+        <div className="bg-[#3A7AC3] px-6 py-3">
+          <h2 className="text-white font-medium">Custom Domain</h2>
         </div>
         <div className="bg-white dark:bg-slate-800 p-6">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
@@ -474,9 +474,9 @@ export default function ProjectSettingsPage() {
             <div className="flex-1 w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
               {project.customDomain || defaultDomain}
             </div>
-            <button 
+            <button
               onClick={() => setShowDomainModal(true)}
-              className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium px-6 py-2 rounded-md transition-colors w-full md:w-auto"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-md transition-colors w-full md:w-auto dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               Custom Domain
             </button>
@@ -501,7 +501,7 @@ export default function ProjectSettingsPage() {
                 created with the same content and settings.
               </p>
             </div>
-            <button 
+            <button
               onClick={() => setShowDuplicateModal(true)}
               className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
             >
@@ -519,7 +519,7 @@ export default function ProjectSettingsPage() {
                 Copy this project to your Personal Projects. The original project will remain unchanged.
               </p>
             </div>
-            <button 
+            <button
               onClick={handleDuplicateToPersonal}
               disabled={actionLoading}
               className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
@@ -539,7 +539,7 @@ export default function ProjectSettingsPage() {
                 and you cannot recover it.
               </p>
             </div>
-            <button 
+            <button
               onClick={() => setShowDeleteModal(true)}
               className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
             >
@@ -550,7 +550,7 @@ export default function ProjectSettingsPage() {
       </div>
 
       {/* MODALS */}
-      
+
       {/* Change Name Modal */}
       <Modal isOpen={showNameModal} onClose={() => setShowNameModal(false)} title="Change Project Name">
         {actionError && (
@@ -580,7 +580,7 @@ export default function ProjectSettingsPage() {
             <button
               onClick={handleUpdateName}
               disabled={actionLoading || !newName.trim()}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               Save
@@ -606,11 +606,10 @@ export default function ProjectSettingsPage() {
                 <button
                   key={status}
                   onClick={() => setNewStatus(status)}
-                  className={`px-4 py-2 rounded-lg border capitalize transition-colors ${
-                    newStatus === status
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600"
-                      : "border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700"
-                  }`}
+                  className={`px-4 py-2 rounded-lg border capitalize transition-colors ${newStatus === status
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600"
+                    : "border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700"
+                    }`}
                 >
                   {status}
                 </button>
@@ -627,7 +626,7 @@ export default function ProjectSettingsPage() {
             <button
               onClick={handleUpdateStatus}
               disabled={actionLoading}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               Save
@@ -669,7 +668,7 @@ export default function ProjectSettingsPage() {
             <button
               onClick={handleUpdateDomain}
               disabled={actionLoading}
-              className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               Save
@@ -699,7 +698,7 @@ export default function ProjectSettingsPage() {
             <button
               onClick={handleDuplicate}
               disabled={actionLoading}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               Duplicate
