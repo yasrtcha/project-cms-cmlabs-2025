@@ -11,12 +11,12 @@ import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 
 // Komponen kecil untuk menampilkan badge status
 const StatusBadge = ({ status }: { status: string }) => {
-  const isOwner = status === "owner";
+  const isSuperAdmin = status === "super-admin" || status === "owner";
   return (
     <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize ${isOwner ? "bg-teal-100 text-teal-800" : "bg-yellow-100 text-yellow-800"
+      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize ${isSuperAdmin ? "bg-teal-100 text-teal-800" : "bg-yellow-100 text-yellow-800"
         }`}>
-      {status}
+      {status === "super-admin" ? "Super Admin" : status}
     </span>
   );
 };
@@ -183,7 +183,7 @@ export default function OrganizationalContent() {
                       </td>
                       <td className="p-4 whitespace-nowrap">
                         <div className="flex items-center space-x-5">
-                          {(org as any).userRole === "owner" && (
+                          {((org as any).userRole === "owner" || (org as any).userRole === "super-admin") && (
                             <button
                               onClick={() => setDeleteTarget({ id: org.id, name: org.name })}
                               className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500"

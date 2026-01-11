@@ -68,6 +68,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 })
     }
 
+    const role = body.role || "viewer"
+
     const user = await prisma.user.findUnique({
       where: { email: body.email.toLowerCase().trim() }
     })
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       data: {
         organizationId: organization.id,
         userId: user.id,
-        role: "collaborator",
+        role: role,
         status: "pending"
       },
       include: { user: { select: { id: true, name: true, email: true, image: true } } }

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
     const { id } = await params
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const isOwner = organization.ownerId === session.user.id
     return NextResponse.json({
       success: true,
-      data: { ...organization, userRole: isOwner ? "owner" : "collaborator" }
+      data: { ...organization, userRole: isOwner ? "super-admin" : "collaborator" }
     })
   } catch (error) {
     console.error("Error fetching organization:", error)
@@ -69,7 +69,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
     const { id } = await params
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
@@ -102,7 +102,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
     const { id } = await params
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }

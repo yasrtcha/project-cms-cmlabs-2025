@@ -251,7 +251,7 @@ model OrganizationMember {
   id             String    @id @default(cuid())
   organizationId String
   userId         String
-  role           String    @default("collaborator") // owner, collaborator
+  role           String    @default("collaborator") // super-admin, collaborator
   status         String    @default("pending") // active, pending
   invitedAt      DateTime  @default(now())
   joinedAt       DateTime?

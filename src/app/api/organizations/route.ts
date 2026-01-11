@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     })
     const orgsWithRole = organizations.map(org => ({
       ...org,
-      userRole: org.ownerId === session.user.id ? "owner" : "collaborator"
+      userRole: org.ownerId === session.user.id ? "super-admin" : "collaborator"
     }))
     return NextResponse.json({ success: true, data: orgsWithRole })
   } catch (error) {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
         shortId, // This requires prisma db push && prisma generate first
         description: body.description || null,
         ownerId: session.user.id,
-        members: { create: { userId: session.user.id, role: "owner", status: "active", joinedAt: new Date() } }
+        members: { create: { userId: session.user.id, role: "super-admin", status: "active", joinedAt: new Date() } }
       } as any,
       include: {
         owner: { select: { id: true, name: true, email: true, image: true } },

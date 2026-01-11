@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             role: { select: { id: true, name: true, slug: true, color: true } }
           }
         },
-        _count: { select: { members: true, contentTypes: true } }
+        _count: { select: { members: true, builderContentTypes: true } }
       }
     })
 
@@ -77,7 +77,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: updateData,
       include: {
         owner: { select: { id: true, name: true, email: true, image: true } },
-        _count: { select: { members: true, contentTypes: true } }
+        _count: { select: { members: true, builderContentTypes: true } }
       }
     })
 

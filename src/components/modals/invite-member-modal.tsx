@@ -6,12 +6,13 @@ import { X } from "lucide-react"
 interface InviteMemberModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: { email: string }) => Promise<{ success: boolean; error?: string }>
+  onSubmit: (data: { email: string; role: string }) => Promise<{ success: boolean; error?: string }>
   title?: string
 }
 
 export function InviteMemberModal({ isOpen, onClose, onSubmit, title = "Invite Member" }: InviteMemberModalProps) {
   const [email, setEmail] = useState("")
+  const [role, setRole] = useState("viewer")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,12 +36,13 @@ export function InviteMemberModal({ isOpen, onClose, onSubmit, title = "Invite M
     setLoading(true)
     setError(null)
 
-    const result = await onSubmit({ email: email.trim() })
+    const result = await onSubmit({ email: email.trim(), role })
 
     setLoading(false)
 
     if (result.success) {
       setEmail("")
+      setRole("viewer")
       onClose()
     } else {
       setError(result.error || "Failed to invite member")
@@ -49,6 +51,7 @@ export function InviteMemberModal({ isOpen, onClose, onSubmit, title = "Invite M
 
   const handleClose = () => {
     setEmail("")
+    setRole("viewer")
     setError(null)
     onClose()
   }
@@ -84,23 +87,47 @@ export function InviteMemberModal({ isOpen, onClose, onSubmit, title = "Invite M
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email Address <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter email address"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              autoFocus
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              The user must have an account to be invited
-            </p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Email Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter email address"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                The user must have an account to be invited
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Assign Role <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="admin">Admin</option>
+                <option value="editor">Editor</option>
+                <option value="viewer">Viewer</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {role === "admin" && "Has administrative access to all projects."}
+                {role === "editor" && "Can create and edit content in projects."}
+                {role === "viewer" && "Can only view content in projects."}
+              </p>
+            </div>
           </div>
 
           {/* Actions */}

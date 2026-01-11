@@ -24,8 +24,8 @@ export default function CollaboratorPage() {
     member.user.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Check if current user is owner
-  const isOwner = (organization as any)?.userRole === "owner";
+  // Check if current user is owner (Super Admin)
+  const isOwner = (organization as any)?.userRole === "super-admin" || (organization as any)?.userRole === "owner";
 
   return (
     <div className="p-8">
@@ -117,25 +117,34 @@ export default function CollaboratorPage() {
                       </div>
 
                       <span
-                        className={`px-4 py-1 rounded-full text-xs font-semibold text-white capitalize ${member.role === "owner" ? "bg-[#3A7AC3]" : "bg-yellow-400"
+                        className={`px-4 py-1 rounded-full text-xs font-semibold text-white capitalize ${(member.role === "super-admin" || member.role === "owner") ? "bg-[#3A7AC3]" :
+                            member.role === "admin" ? "bg-red-500" :
+                              member.role === "editor" ? "bg-blue-500" :
+                                "bg-green-500"
                           }`}
                       >
-                        {member.role}
+                        {member.role === "super-admin" ? "Super Admin" : member.role}
                       </span>
                     </div>
                   </td>
 
                   <td className="p-4 text-center">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${member.status === "active"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-yellow-100 text-yellow-800"
                       }`}>
                       {member.status}
                     </span>
                   </td>
 
-                  <td className="p-4 text-center text-gray-600 dark:text-gray-300 text-sm capitalize">
-                    {member.role}
+                  <td className="p-4 text-center">
+                    <span className={`px-2 py-1 rounded text-xs font-medium uppercase tracking-wider ${(member.role === "super-admin" || member.role === "owner") ? "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20" :
+                        member.role === "admin" ? "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20" :
+                          member.role === "editor" ? "text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-900/20" :
+                            "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/20"
+                      }`}>
+                      {member.role === "super-admin" ? "Super Admin" : member.role}
+                    </span>
                   </td>
 
                   <td className="p-4 text-center">
@@ -148,7 +157,7 @@ export default function CollaboratorPage() {
                           <Mail size={18} />
                         </button>
                       )}
-                      {member.role !== "owner" && isOwner && (
+                      {member.role !== "owner" && member.role !== "super-admin" && isOwner && (
                         <button
                           onClick={() => setDeleteTarget({ userId: member.userId, name: member.user.name || "this member" })}
                           className="text-red-500 hover:text-red-700 transition-colors"

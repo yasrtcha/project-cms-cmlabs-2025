@@ -5,9 +5,12 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Sidebar } from "../../../components/layout/sidebar";
 import { Header } from "../../../components/layout/header";
-import { Trash2, Loader2, Copy, X, Check } from "lucide-react";
+import { Trash2, Loader2, Copy, X, Check, Search } from "lucide-react";
+import { checkDomainAvailability } from "@/app/builder/_actions/domain-actions";
+import { cn } from "@/lib/utils";
 
 interface ProjectDetail {
+  // ... (rest of interface)
   id: string;
   shortId?: string;
   name: string;
@@ -77,16 +80,20 @@ export default function PersonalProjectDetailPage() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showDomainModal, setShowDomainModal] = useState(false);
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   // Form states
   const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
   const [newStatus, setNewStatus] = useState("");
   const [newDomain, setNewDomain] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [domainAvailability, setDomainAvailability] = useState<{ checked: boolean; available: boolean; error?: string }>({ checked: false, available: false });
 
   // Fetch project
   const fetchProject = useCallback(async () => {
@@ -97,6 +104,7 @@ export default function PersonalProjectDetailPage() {
       if (data.success && data.data) {
         setProject(data.data);
         setNewName(data.data.name);
+        setNewDescription(data.data.description || "");
         setNewStatus(data.data.status);
         setNewDomain(data.data.customDomain || "");
       } else {
@@ -133,6 +141,32 @@ export default function PersonalProjectDetailPage() {
       }
     } catch (err) {
       setActionError("Failed to update name");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Update description
+  const handleUpdateDescription = async () => {
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/personal-projects/${projectId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: newDescription.trim() || null })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProject(prev => prev ? { ...prev, description: newDescription.trim() || null } : null);
+        setShowDescriptionModal(false);
+        setActionSuccess("Description updated successfully");
+        setTimeout(() => setActionSuccess(null), 3000);
+      } else {
+        setActionError(data.error || "Failed to update description");
+      }
+    } catch (err) {
+      setActionError("Failed to update description");
     } finally {
       setActionLoading(false);
     }
@@ -234,6 +268,30 @@ export default function PersonalProjectDetailPage() {
     }
   };
 
+  // Check domain availability
+  const handleCheckAvailability = async () => {
+    if (!newDomain.trim() || !newDomain.includes(".")) {
+      setDomainAvailability({ checked: true, available: false, error: "Invalid domain format" });
+      return;
+    }
+
+    setCheckingAvailability(true);
+    setDomainAvailability({ checked: false, available: false });
+
+    try {
+      const result = await checkDomainAvailability(newDomain.trim());
+      if (result.success) {
+        setDomainAvailability({ checked: true, available: result.available || false });
+      } else {
+        setDomainAvailability({ checked: true, available: false, error: result.error });
+      }
+    } catch (err) {
+      setDomainAvailability({ checked: true, available: false, error: "Failed to check availability" });
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -329,6 +387,15 @@ export default function PersonalProjectDetailPage() {
                   <button onClick={() => setShowNameModal(true)} className="text-[#3A7AC3] text-sm hover:underline font-medium">Change Name</button>
                 </div>
               </div>
+              {project.description && (
+                <div className="grid grid-cols-1 md:grid-cols-12 px-6 py-4 items-center">
+                  <div className="col-span-3 text-sm font-medium text-gray-600 dark:text-gray-400">Description</div>
+                  <div className="col-span-9 flex justify-between items-center">
+                    <span className="text-sm text-gray-900 dark:text-white leading-relaxed">{project.description}</span>
+                    <button onClick={() => setShowDescriptionModal(true)} className="text-[#3A7AC3] text-sm hover:underline font-medium ml-4 shrink-0">Change Description</button>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-12 px-6 py-4 items-center">
                 <div className="col-span-3 text-sm font-medium text-gray-600 dark:text-gray-400">Last Updated</div>
                 <div className="col-span-9 text-sm text-gray-900 dark:text-white">{formatRelativeTime(project.updatedAt)}</div>
@@ -409,6 +476,27 @@ export default function PersonalProjectDetailPage() {
         </div>
       </Modal>
 
+      <Modal isOpen={showDescriptionModal} onClose={() => setShowDescriptionModal(false)} title="Change Project Description">
+        {actionError && <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm">{actionError}</div>}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+            <textarea
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setShowDescriptionModal(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
+            <button onClick={handleUpdateDescription} disabled={actionLoading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600">
+              {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}Save
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <Modal isOpen={showStatusModal} onClose={() => setShowStatusModal(false)} title="Change Status">
         {actionError && <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm">{actionError}</div>}
         <div className="space-y-4">
@@ -433,12 +521,58 @@ export default function PersonalProjectDetailPage() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Custom Domain</label>
-            <input type="text" value={newDomain} onChange={(e) => setNewDomain(e.target.value)} placeholder="example.com" className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white" />
-            <p className="text-xs text-gray-500 mt-1">Leave empty to use default: {defaultDomain}</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newDomain}
+                onChange={(e) => {
+                  setNewDomain(e.target.value);
+                  setDomainAvailability({ checked: false, available: false });
+                }}
+                placeholder="example.com"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+              />
+              <button
+                onClick={handleCheckAvailability}
+                disabled={checkingAvailability || !newDomain.trim()}
+                className="px-3 py-2 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                title="Check availability"
+              >
+                {checkingAvailability ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+              </button>
+            </div>
+
+            {domainAvailability.checked && (
+              <div className={cn(
+                "mt-2 p-2 rounded-md text-xs font-semibold flex items-center gap-2",
+                domainAvailability.available ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border border-red-100"
+              )}>
+                {domainAvailability.available ? (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    Domain is Available!
+                  </>
+                ) : (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    {domainAvailability.error || "Domain is Taken / Unavailable"}
+                  </>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-gray-500 mt-2">Leave empty to use default: {defaultDomain}</p>
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end items-center gap-3">
+            {!!newDomain.trim() && !domainAvailability.checked && (
+              <span className="text-[10px] text-amber-600 font-medium">Please check availability first</span>
+            )}
             <button onClick={() => setShowDomainModal(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
-            <button onClick={handleUpdateDomain} disabled={actionLoading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600">
+            <button
+              onClick={handleUpdateDomain}
+              disabled={actionLoading || (!!newDomain.trim() && (!domainAvailability.checked || !domainAvailability.available))}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 dark:bg-blue-500 dark:hover:bg-blue-600"
+            >
               {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}Save
             </button>
           </div>

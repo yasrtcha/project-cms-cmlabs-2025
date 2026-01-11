@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         owner: { select: { id: true, name: true, email: true, image: true } },
-        _count: { select: { members: true, contentTypes: true } }
+        _count: { select: { members: true, builderContentTypes: true } }
       },
       orderBy: { updatedAt: "desc" }
     })
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       } as any,
       include: {
         owner: { select: { id: true, name: true, email: true, image: true } },
-        _count: { select: { members: true, contentTypes: true } }
+        _count: { select: { members: true, builderContentTypes: true } }
       }
     })
 

@@ -78,12 +78,12 @@ export async function POST(request: NextRequest) {
       } as any,
       include: {
         owner: { select: { id: true, name: true, email: true, image: true } },
-        _count: { select: { members: true, contentTypes: true } }
+        _count: { select: { members: true, builderContentTypes: true } }
       }
     })
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: newProject,
       message: "Project duplicated to personal successfully"
     }, { status: 201 })

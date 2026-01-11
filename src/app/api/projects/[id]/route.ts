@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
     const { id } = await params
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           }
         },
         _count: {
-          select: { members: true, contentTypes: true }
+          select: { members: true, builderContentTypes: true }
         }
       }
     })
@@ -87,7 +87,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
     const { id } = await params
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -132,7 +132,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           select: { id: true, name: true, slug: true }
         },
         _count: {
-          select: { members: true, contentTypes: true }
+          select: { members: true, builderContentTypes: true }
         }
       }
     })
@@ -156,7 +156,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
     const { id } = await params
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },

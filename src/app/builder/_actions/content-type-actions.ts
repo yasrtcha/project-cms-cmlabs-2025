@@ -20,7 +20,23 @@ type CreateTypeParams = {
 
 export async function createContentType({ name, slug, type, projectId, config, preset }: CreateTypeParams) {
   try {
-    // 1. Bersihkan Slug/API ID
+    console.log("Creating content type with params:", { name, slug, type, projectId, config, preset });
+
+    // 1. Resolve Project ID (handle if projectId is a slug)
+    const project = await prisma.project.findFirst({
+      where: {
+        OR: [{ id: projectId }, { slug: projectId }]
+      }
+    });
+
+    if (!project) {
+      return { success: false, error: `Project not found: ${projectId}` };
+    }
+
+    const actualProjectId = project.id;
+    console.log("Resolved project ID:", actualProjectId);
+
+    // 2. Bersihkan Slug/API ID
     // Jika user tidak isi slug, pakai name. Ubah jadi huruf kecil & ganti spasi jadi strip/underscore
     const finalSlug = (slug || name)
       .toLowerCase()
@@ -29,13 +45,27 @@ export async function createContentType({ name, slug, type, projectId, config, p
       .replace(/[\s_-]+/g, '-')    // Ganti spasi/_ jadi -
       .replace(/^-+|-+$/g, '');    // Hapus - di awal/akhir
 
-    // 2. Simpan ke Database
+    console.log("Final slug generated:", finalSlug);
+
+    // 3. Cek apakah slug sudah terpakai di project ini
+    const existing = await prisma.builderContentType.findFirst({
+      where: {
+        projectId: actualProjectId,
+        slug: finalSlug
+      }
+    });
+
+    if (existing) {
+      return { success: false, error: "API ID is already taken in this project." };
+    }
+
+    // 4. Simpan ke Database
     const newContent = await prisma.builderContentType.create({
       data: {
         name,
         slug: finalSlug,
         type,
-        projectId,
+        projectId: actualProjectId,
         // Masukkan data Advanced Configuration
         hasSeo: config.hasSeo,
         hasWorkflow: config.hasWorkflow,
@@ -100,9 +130,9 @@ export async function createContentType({ name, slug, type, projectId, config, p
     revalidatePath(`/builder/${projectId}`);
 
     return { success: true, data: newContent };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gagal membuat content type:", error);
     // Return error jika nama/slug sudah terpakai
-    return { success: false, error: "Failed to create. Name or API ID might be taken." };
+    return { success: false, error: `Failed to create: ${error.message || "Name or API ID might be taken."}` };
   }
 }
