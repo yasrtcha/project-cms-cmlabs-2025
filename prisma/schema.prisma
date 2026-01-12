@@ -31,15 +31,18 @@ model User {
   sessions      Session[]
 
   // Organization Relations
-  ownedOrganizations  Organization[]       @relation("OrganizationOwner")
+  ownedOrganizations  Organization[]        @relation("OrganizationOwner")
   organizationMembers OrganizationMember[]
 
   // Project Relations
-  ownedProjects  Project[]       @relation("ProjectOwner")
+  ownedProjects  Project[]        @relation("ProjectOwner")
   projectMembers ProjectMember[]
 
   // Content Relations (Authoring)
   contentEntries ContentEntry[]
+  
+  // Workflow Approvals (User melakukan approve/reject)
+  workflowLogs   ContentWorkflowLog[]
 
   // Billing Relations
   subscriptions Subscription[]
@@ -93,7 +96,7 @@ model PasswordResetToken {
 }
 
 // ============================================================================
-// PLANS & BILLING
+// 2. PLANS & BILLING
 // ============================================================================
 
 enum PlanTier {
@@ -119,17 +122,17 @@ model Plan {
   price       Int      // Price in cents (0 for free)
   
   // Feature Limits (null = unlimited)
-  maxPersonalProjects      Int?
-  maxOrganizations         Int?
-  maxOrgProjects           Int?
-  maxTeamMembersPerOrg     Int?
+  maxPersonalProjects       Int?
+  maxOrganizations          Int?
+  maxOrgProjects            Int?
+  maxTeamMembersPerOrg      Int?
   maxContentEntriesPerProject Int?
-  maxCustomDomains         Int?
-  maxApiCallsPerMonth      Int?
-  maxMediaStorageMB        Int?
+  maxCustomDomains          Int?
+  maxApiCallsPerMonth       Int?
+  maxMediaStorageMB         Int?
   maxContentTypesPerProject Int?
-  maxLocalizations         Int?
-  auditLogRetentionDays    Int      @default(7)
+  maxLocalizations          Int?
+  auditLogRetentionDays     Int       @default(7)
   
   // Features
   hasCustomDomains Boolean  @default(false)
@@ -137,23 +140,23 @@ model Plan {
   hasWhiteLabel    Boolean  @default(false)
   supportLevel     String   @default("community") // community, email, priority, dedicated
   
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   
   subscriptions Subscription[]
 }
 
 model Subscription {
-  id               String             @id @default(cuid())
-  userId           String
-  planId           String
-  status           SubscriptionStatus @default(TRIALING)
+  id                String             @id @default(cuid())
+  userId            String
+  planId            String
+  status            SubscriptionStatus @default(TRIALING)
   
   // Billing
-  stripeCustomerId       String? @unique
-  stripeSubscriptionId   String? @unique
-  stripePriceId          String?
+  stripeCustomerId        String? @unique
+  stripeSubscriptionId    String? @unique
+  stripePriceId           String?
   
   // Lifecycle
   currentPeriodStart DateTime
@@ -177,7 +180,7 @@ model Subscription {
 }
 
 model Usage {
-  id             String   @id @default(cuid())
+  id               String   @id @default(cuid())
   subscriptionId String
   
   // Usage Metrics
@@ -201,20 +204,20 @@ model Usage {
 }
 
 model Invoice {
-  id               String   @id @default(cuid())
-  userId           String
-  subscriptionId   String?
+  id                String   @id @default(cuid())
+  userId            String
+  subscriptionId    String?
   
-  amount           Int      // Amount in cents
-  currency         String   @default("USD")
-  status           String   // paid, pending, failed
+  amount            Int      // Amount in cents
+  currency          String   @default("USD")
+  status            String   // paid, pending, failed
   
-  stripeInvoiceId  String?  @unique
-  invoiceNumber    String?
-  invoiceUrl       String?
+  stripeInvoiceId   String?  @unique
+  invoiceNumber     String?
+  invoiceUrl        String?
   
-  paidAt           DateTime?
-  createdAt        DateTime @default(now())
+  paidAt            DateTime?
+  createdAt         DateTime @default(now())
   
   user User @relation(fields: [userId], references: [id])
   
@@ -223,7 +226,7 @@ model Invoice {
 }
 
 // ============================================================================
-// 2. ORGANIZATION
+// 3. ORGANIZATION & PROJECT
 // ============================================================================
 
 model Organization {
@@ -238,8 +241,8 @@ model Organization {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  owner    User                 @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members  OrganizationMember[]
+  owner   User                  @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members OrganizationMember[]
   projects Project[]
 
   @@index([ownerId])
@@ -265,10 +268,6 @@ model OrganizationMember {
   @@index([userId])
 }
 
-// ============================================================================
-// 3. PROJECT
-// ============================================================================
-
 model Project {
   id           String  @id @default(cuid())
   shortId      String  @unique // 6 karakter unik untuk display
@@ -286,12 +285,15 @@ model Project {
   updatedAt DateTime @updatedAt
 
   // Relations
-  owner          User                 @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  organization   Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner          User                  @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   members        ProjectMember[]
   
-  // Relasi ke Builder Content Type (Sistem Baru)
+  // CMS Features
   builderContentTypes BuilderContentType[]
+  apiTokens           ApiToken[]
+  workflows           Workflow[]
+  roles               Role[] // Custom roles defined within this project
 
   @@unique([organizationId, slug])
   @@index([ownerId])
@@ -329,13 +331,19 @@ model Role {
   description String?
   color       String?
   isSystem    Boolean  @default(false)
-  projectId   String?  // null = global role
+  
+  projectId   String?  // null = global system role, filled = project specific role
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
   permissions RolePermission[]
   members     ProjectMember[]
+  
+  // Role ini bisa ditugaskan di langkah workflow
+  assignedWorkflowSteps WorkflowStep[]
 
   @@unique([slug, projectId])
   @@index([projectId])
@@ -358,7 +366,77 @@ model RolePermission {
 }
 
 // ============================================================================
-// 5. CONTENT BUILDER (STRUCTURE SCHEMA)
+// 5. API INTEGRATION (NEW FEATURE)
+// ============================================================================
+
+model ApiToken {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  token       String    @unique // Hashed or plain token (e.g., "wf_sk_...")
+  
+  // Permissions stored as JSON (e.g. ["read", "create", "delete"])
+  permissions Json      @default("[]") 
+  scope       String    @default("Custom") // "Full Access", "Read Only", "Custom"
+  
+  expiresAt   DateTime? // Jika null = Forever
+  lastUsedAt  DateTime?
+  
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([projectId])
+}
+
+// ============================================================================
+// 6. WORKFLOW APPROVAL (NEW FEATURE)
+// ============================================================================
+
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // Steps/Tahapan (e.g. Draft -> Editor Review -> Legal Review -> Publish)
+  steps       WorkflowStep[]
+  
+  // Tipe Konten yang menggunakan workflow ini
+  appliedContentTypes BuilderContentType[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model WorkflowStep {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "Editor Review"
+  order       Int      // Urutan: 1, 2, 3
+  
+  // Siapa yang boleh approve di tahap ini? (Berdasarkan Role)
+  roleId      String?
+  role        Role?    @relation(fields: [roleId], references: [id])
+  
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  // Relasi ke konten yang sedang "stuck" di step ini
+  currentContents ContentEntry[]
+
+  @@index([workflowId])
+  @@index([roleId])
+}
+
+// ============================================================================
+// 7. CONTENT BUILDER (STRUCTURE SCHEMA)
 // ============================================================================
 
 model BuilderContentType {
@@ -369,8 +447,12 @@ model BuilderContentType {
   description String?
 
   hasSeo       Boolean @default(false)
-  hasWorkflow  Boolean @default(false)
   hasMultiLang Boolean @default(false)
+
+  // Link ke Workflow (Opsional)
+  hasWorkflow Boolean   @default(false)
+  workflowId  String?
+  workflow    Workflow? @relation(fields: [workflowId], references: [id])
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -386,6 +468,7 @@ model BuilderContentType {
 
   @@unique([projectId, slug])
   @@index([projectId])
+  @@index([workflowId])
 }
 
 model BuilderFieldGroup {
@@ -402,10 +485,10 @@ model BuilderFieldGroup {
 }
 
 model BuilderField {
-  id      String @id @default(cuid())
-  name    String // Label: "Hero Title"
-  apiId   String // API Key: "hero_title"
-  type    String // text, media, relation, etc
+  id       String @id @default(cuid())
+  name     String // Label: "Hero Title"
+  apiId    String // API Key: "hero_title"
+  type     String // text, media, relation, etc
 
   // Validasi
   isRequired Boolean @default(false)
@@ -426,7 +509,7 @@ model BuilderField {
 }
 
 // ============================================================================
-// 6. CONTENT ENTRY (DATA STORAGE - JSON)
+// 8. CONTENT ENTRY (DATA STORAGE)
 // ============================================================================
 
 model ContentEntry {
@@ -439,7 +522,11 @@ model ContentEntry {
   seoData       Json?    @default("{}")
   
   // Status Publikasi
-  status        String   @default("DRAFT") // DRAFT, PUBLISHED, ARCHIVED
+  status        String   @default("DRAFT") // DRAFT, IN_REVIEW, APPROVED, PUBLISHED, ARCHIVED, REJECTED
+  
+  // WORKFLOW STATE (Posisi konten saat ini ada di step mana)
+  currentStepId String? 
+  currentStep   WorkflowStep? @relation(fields: [currentStepId], references: [id])
   
   // Relasi ke Struktur Builder
   contentTypeId String
@@ -449,9 +536,33 @@ model ContentEntry {
   createdById   String?
   createdBy     User?    @relation(fields: [createdById], references: [id])
 
+  // Riwayat Approval/Log
+  workflowLogs  ContentWorkflowLog[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([contentTypeId])
   @@index([createdById])
+  @@index([currentStepId])
+}
+
+// Log History (Siapa approve, kapan, komentar apa)
+model ContentWorkflowLog {
+  id             String   @id @default(cuid())
+  
+  contentEntryId String
+  contentEntry   ContentEntry @relation(fields: [contentEntryId], references: [id], onDelete: Cascade)
+  
+  actorId        String   // User yang melakukan aksi
+  actor          User     @relation(fields: [actorId], references: [id])
+  
+  action         String   // "SUBMIT", "APPROVE", "REJECT", "PUBLISH"
+  stepName       String?  // Nama step saat aksi dilakukan (snapshot)
+  comment        String?  // Alasan reject/approve
+  
+  createdAt      DateTime @default(now())
+
+  @@index([contentEntryId])
+  @@index([actorId])
 }
