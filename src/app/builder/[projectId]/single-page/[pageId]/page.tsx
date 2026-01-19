@@ -2,10 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SinglePageBuilderClient from "./SinglePageBuilderClient";
 
-export default async function Page({ 
-  params 
-}: { 
-  params: Promise<{ projectId: string, pageId: string }> 
+export default async function Page({
+  params
+}: {
+  params: Promise<{ projectId: string, pageId: string }>
 }) {
   // 1. Await params (Wajib untuk Next.js 15)
   const { projectId, pageId } = await params;
@@ -21,8 +21,11 @@ export default async function Page({
           }
         },
         orderBy: { order: 'asc' }
-      }
-    }
+      },
+      usedComponents: true
+    } as any
+
+
   });
 
   if (!rawPageData) return notFound();
@@ -39,7 +42,7 @@ export default async function Page({
     },
     select: { id: true, name: true, slug: true, type: true }
   });
-  
+
   // Bersihkan data relasi juga
   const allContentTypes = JSON.parse(JSON.stringify(rawContentTypes));
 

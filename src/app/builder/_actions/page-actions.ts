@@ -26,6 +26,22 @@ export async function createNewPage(data: { name: string, slug: string, projectI
   }
 }
 
+// --- 3. FUNGSI UNTUK MENGUPDATE NAMA HALAMAN ---
+export async function updatePageName(pageId: string, name: string, projectId: string) {
+  try {
+    await prisma.builderContentType.update({
+      where: { id: pageId },
+      data: { name }
+    })
+
+    revalidatePath(`/builder/${projectId}`)
+    return { success: true }
+  } catch (error) {
+    console.error("Gagal update nama halaman:", error)
+    return { success: false }
+  }
+}
+
 // --- 2. FUNGSI UNTUK MENGHAPUS HALAMAN ---
 export async function deletePage(pageId: string, projectId: string) {
   try {

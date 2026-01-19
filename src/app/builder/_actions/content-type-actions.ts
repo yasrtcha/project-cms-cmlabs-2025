@@ -83,9 +83,48 @@ export async function createContentType({ name, slug, type, projectId, config, p
         }
       });
 
-      let fields: { name: string, apiId: string, type: string }[] = [];
+      let fields: { name: string, apiId: string, type: string, options?: any }[] = [];
 
-      if (preset === "BUTTON") {
+      if (preset === "NAVBAR") {
+        fields = [
+          { name: "Logo", apiId: "logo", type: "media" },
+          {
+            name: "Menu Links",
+            apiId: "menu_links",
+            type: "multiple",
+            options: {
+              subFields: [
+                { name: "Label", apiId: "label", type: "text" },
+                { name: "URL", apiId: "url", type: "text" }
+              ]
+            }
+          }
+        ];
+      } else if (preset === "HEADER") {
+        fields = [
+          { name: "Title", apiId: "title", type: "text" },
+          { name: "Subtitle", apiId: "subtitle", type: "text" },
+          { name: "Background Image", apiId: "background", type: "media" },
+          { name: "CTA Label", apiId: "cta_label", type: "text" },
+          { name: "CTA URL", apiId: "cta_url", type: "text" }
+        ];
+      } else if (preset === "FOOTER") {
+        fields = [
+          { name: "Copyright Text", apiId: "copyright", type: "text" },
+          {
+            name: "Social Media",
+            apiId: "socials",
+            type: "multiple",
+            options: {
+              subFields: [
+                { name: "Platform", apiId: "platform", type: "text" },
+                { name: "URL", apiId: "url", type: "text" },
+                { name: "Icon", apiId: "icon", type: "media" }
+              ]
+            }
+          }
+        ];
+      } else if (preset === "BUTTON") {
         fields = [
           { name: "Label", apiId: "label", type: "text" },
           { name: "URL", apiId: "url", type: "text" },
@@ -114,7 +153,10 @@ export async function createContentType({ name, slug, type, projectId, config, p
       const fieldCreations = fields.map((f, index) =>
         prisma.builderField.create({
           data: {
-            ...f,
+            name: f.name,
+            apiId: f.apiId,
+            type: f.type,
+            options: f.options || {},
             fieldGroupId: group.id,
             order: index,
             isRequired: false,
@@ -134,5 +176,44 @@ export async function createContentType({ name, slug, type, projectId, config, p
     console.error("Gagal membuat content type:", error);
     // Return error jika nama/slug sudah terpakai
     return { success: false, error: `Failed to create: ${error.message || "Name or API ID might be taken."}` };
+  }
+}
+
+// Update attached components for a Page
+export async function savePageComponents(pageId: string, componentIds: string[]) {
+  try {
+    await prisma.builderContentType.update({
+      where: { id: pageId },
+      data: {
+        usedComponents: {
+          set: componentIds.map(id => ({ id }))
+        }
+      } as any
+    });
+
+
+    revalidatePath(`/builder`);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update page components:", error);
+    return { success: false, error: "Failed to update components" };
+  }
+}
+
+export async function saveSectionsOrder(pageId: string, sectionsOrder: any[]) {
+  try {
+    console.log("Saving sections order for page:", pageId, sectionsOrder);
+    await prisma.builderContentType.update({
+      where: { id: pageId },
+      data: {
+        sectionsOrder: sectionsOrder
+      } as any
+    });
+
+    revalidatePath('/', 'layout');
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to save sections order:", error);
+    return { success: false, error: "Failed to save order" };
   }
 }

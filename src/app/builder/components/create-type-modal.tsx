@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { X, Loader2, Search, Book, PenLine, MousePointer2, Share2, HelpCircle, MessageSquareQuote } from "lucide-react";
+import { X, Loader2, Search, Book, Menu, Layout, ChevronDown, PenLine, MousePointer2, Share2, HelpCircle, MessageSquareQuote } from "lucide-react";
 import { createContentType } from "@/app/builder/_actions/content-type-actions";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,9 @@ type ModalProps = {
 };
 
 const COMPONENT_PRESETS = [
+  { id: "NAVBAR", title: "Navigation Bar", icon: Menu, desc: "Logo and Menu links for header.", color: "text-blue-600 bg-blue-50" },
+  { id: "HEADER", title: "Hero Header", icon: Layout, desc: "Main page header with title and CTA.", color: "text-indigo-600 bg-indigo-50" },
+  { id: "FOOTER", title: "Page Footer", icon: ChevronDown, desc: "Copyright and Social Media links.", color: "text-slate-600 bg-slate-50" },
   { id: "BUTTON", title: "Action Button", icon: MousePointer2, desc: "Label, URL, and Style settings.", color: "text-blue-600 bg-blue-50" },
   { id: "SEO_CARD", title: "SEO Card", icon: Share2, desc: "Title, Description, and Image for socials.", color: "text-purple-600 bg-purple-50" },
   { id: "FAQ", title: "FAQ Item", icon: HelpCircle, desc: "Question and Answer pair.", color: "text-emerald-600 bg-emerald-50" },

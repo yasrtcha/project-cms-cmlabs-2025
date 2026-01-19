@@ -41,36 +41,21 @@ export async function getContentEntries(projectId: string, slug: string) {
         // For now, assuming entries are linked to BuilderContentType
         const entries = await prisma.contentEntry.findMany({
             where: { contentTypeId: contentType.id },
-            include: {
-                fieldValues: {
-                    include: {
-                        field: true
-                    }
-                }
-            },
             orderBy: { updatedAt: 'desc' }
         });
 
         // Transform entries to a cleaner format (flat object) for the UI
         const flatEntries = entries.map(entry => {
-            const values: Record<string, any> = {};
-            entry.fieldValues.forEach((val: any) => {
-                if (val.field && val.value) {
-                    // Try to parse JSON values
-                    try {
-                        values[val.field.slug] = JSON.parse(val.value);
-                    } catch {
-                        values[val.field.slug] = val.value;
-                    }
-                }
-            });
+            const values = (entry.data as Record<string, any>) || {};
+            const seoValues = (entry.seoData as Record<string, any>) || {};
 
             return {
                 id: entry.id,
                 status: entry.status,
                 createdAt: entry.createdAt,
                 updatedAt: entry.updatedAt,
-                ...values
+                ...values,
+                ...seoValues
             };
         });
 
@@ -90,11 +75,6 @@ export async function getSingleEntry(entryId: string) {
         const entry = await prisma.contentEntry.findUnique({
             where: { id: entryId },
             include: {
-                fieldValues: {
-                    include: {
-                        field: true
-                    }
-                },
                 contentType: {
                     include: {
                         fieldGroups: {
@@ -110,23 +90,12 @@ export async function getSingleEntry(entryId: string) {
 
         if (!entry) return { success: false, error: "Entry not found" };
 
-        const flatValues: Record<string, any> = {};
-        entry.fieldValues.forEach((val: any) => {
-            if (!val.field || !val.value) return;
-
-            let parsedValue = val.value;
-            // Attempt to parse JSON if it feels like JSON (for complex fields like media/relation)
-            try {
-                if (val.value && (val.value.startsWith('{') || val.value.startsWith('['))) {
-                    parsedValue = JSON.parse(val.value);
-                }
-            } catch (e) { }
-            flatValues[val.field.slug] = parsedValue;
-        });
+        const flatValues = (entry.data as Record<string, any>) || {};
+        const seoValues = (entry.seoData as Record<string, any>) || {};
 
         return {
             success: true,
-            data: { ...entry, values: flatValues },
+            data: { ...entry, values: { ...flatValues, ...seoValues } },
             model: entry.contentType
         };
 
@@ -160,72 +129,46 @@ export async function saveContentEntry({ projectId, slug, entryId, data }: SaveE
         // For now, we'll use a placeholder - you need to implement proper auth
         const defaultUserId = "default_user_id"; // TODO: Get from session
 
-        // 3. Prepare Transaction
+        // 3. Prepare Data
+        const seoFields = ['meta_title', 'meta_description', 'slug'];
+        const entryData: Record<string, any> = {};
+        const seoData: Record<string, any> = {};
+
+        for (const [key, value] of Object.entries(data)) {
+            if (seoFields.includes(key)) {
+                seoData[key] = value;
+            } else {
+                // Only save fields that exist in the content type definition
+                const isDefined = allFields.some(f => f.apiId === key);
+                if (isDefined) {
+                    entryData[key] = value;
+                }
+            }
+        }
+
         let targetEntryId = entryId;
 
         await prisma.$transaction(async (tx) => {
-            // A. Create/Update Entry Record
             if (targetEntryId && targetEntryId !== 'new') {
                 await tx.contentEntry.update({
                     where: { id: targetEntryId },
-                    data: { updatedAt: new Date() }
+                    data: {
+                        data: entryData,
+                        seoData: seoData,
+                        updatedAt: new Date()
+                    }
                 });
             } else {
                 const newEntry = await tx.contentEntry.create({
                     data: {
                         contentTypeId: contentType.id,
                         createdById: defaultUserId,
-                        status: 'draft',
-                        locale: 'en',
-                        // SEO fields if provided
-                        seoTitle: data['meta_title'] as string || null,
-                        seoDescription: data['meta_description'] as string || null,
-                        seoSlug: data['slug'] as string || null,
+                        status: 'DRAFT',
+                        data: entryData,
+                        seoData: seoData,
                     }
                 });
                 targetEntryId = newEntry.id;
-            }
-
-            // B. Update/Create Values
-            for (const [key, value] of Object.entries(data)) {
-                // Skip SEO fields as they're stored directly on ContentEntry
-                if (['meta_title', 'meta_description', 'slug'].includes(key)) continue;
-
-                const field = allFields.find(f => f.apiId === key);
-                if (!field) continue; // Skip unknown fields
-
-                // Serialize value
-                let storedValue = value;
-                if (typeof value === 'object') {
-                    storedValue = JSON.stringify(value);
-                } else {
-                    storedValue = String(value);
-                }
-
-                // Check if value exists
-                const existingVal = await tx.fieldValue.findFirst({
-                    where: {
-                        entryId: targetEntryId,
-                        fieldId: field.id,
-                        locale: 'en'
-                    }
-                });
-
-                if (existingVal) {
-                    await tx.fieldValue.update({
-                        where: { id: existingVal.id },
-                        data: { value: storedValue }
-                    });
-                } else {
-                    await tx.fieldValue.create({
-                        data: {
-                            entryId: targetEntryId!,
-                            fieldId: field.id,
-                            value: storedValue,
-                            locale: 'en'
-                        }
-                    });
-                }
             }
         });
 

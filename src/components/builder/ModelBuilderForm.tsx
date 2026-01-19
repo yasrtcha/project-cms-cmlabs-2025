@@ -415,9 +415,17 @@ export default function ModelBuilderForm({
                                                         placeholder="e.g., Title, Price, Author"
                                                         disabled={field.isLocked}
                                                         onChange={(e) => {
+                                                            const newLabel = e.target.value;
                                                             register(`fields.${index}.label`).onChange(e);
-                                                            if (!field.isLocked && !watch(`fields.${index}.apiKey`)) {
-                                                                generateApiKey(e.target.value, index);
+
+                                                            // Auto-sync API Key
+                                                            if (!field.isLocked) {
+                                                                const apiKey = newLabel
+                                                                    .toLowerCase()
+                                                                    .trim()
+                                                                    .replace(/[^\w\s]/g, '')
+                                                                    .replace(/\s+/g, '_');
+                                                                setValue(`fields.${index}.apiKey`, apiKey);
                                                             }
                                                         }}
                                                         className="w-full px-3 py-2 rounded border border-gray-300 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"

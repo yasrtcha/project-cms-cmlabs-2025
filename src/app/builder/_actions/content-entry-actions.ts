@@ -6,25 +6,54 @@ import { revalidatePath } from "next/cache"
 // 1. Ambil SATU Entry (Untuk Edit Form)
 export async function getContentEntry(entryId: string) {
   try {
-    const entry = await prisma.contentEntry.findUnique({
+    // Coba cari langsung berdasarkan ID
+    let entry = await prisma.contentEntry.findUnique({
       where: { id: entryId }
     });
+
+    // Jika tidak ketemu, coba cari berdasarkan contentTypeId (Biasanya untuk Single Page)
+    if (!entry) {
+      entry = await prisma.contentEntry.findFirst({
+        where: { contentTypeId: entryId },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
+
     return { success: true, data: entry };
   } catch (error) {
     return { success: false, error: "Failed to fetch content" };
   }
 }
 
-// 2. Ambil BANYAK Entry (Untuk Tabel List)
-export async function getContentEntries(contentTypeId: string) {
+// 2. Ambil BANYAK Entry (Untuk Tabel List) - Mendukung Pagination
+export async function getContentEntries(contentTypeId: string, page: number = 1, limit: number = 10) {
   try {
-    const entries = await prisma.contentEntry.findMany({
-      where: { contentTypeId },
-      orderBy: { updatedAt: 'desc' }
-    });
-    return { success: true, data: entries };
+    const skip = (page - 1) * limit;
+
+    const [entries, total] = await Promise.all([
+      prisma.contentEntry.findMany({
+        where: { contentTypeId },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.contentEntry.count({
+        where: { contentTypeId }
+      })
+    ]);
+
+    return {
+      success: true,
+      data: entries,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   } catch (error) {
-    return { success: false, data: [] };
+    return { success: false, data: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
   }
 }
 
@@ -37,7 +66,7 @@ export async function saveContentEntry({
   status = "PUBLISHED"
 }: {
   contentTypeId: string,
-  entryId?: string, 
+  entryId?: string,
   data: any,
   seoData?: any,
   status?: string
@@ -82,7 +111,7 @@ export async function saveContentEntry({
       }
     }
 
-    revalidatePath(`/builder`); 
+    revalidatePath(`/builder`);
     return { success: true };
   } catch (error) {
     console.error("Save Error:", error);
@@ -123,3 +152,24 @@ export async function getRelationOptions(targetContentTypeId: string) {
     return { success: false, data: [] };
   }
 }
+// 6. Ambil SEMUA Entry dari Content Type bertipe COMPONENT (Untuk Layout/Global)
+export async function getGlobalComponentEntries(projectId: string) {
+  try {
+    const entries = await prisma.contentEntry.findMany({
+      where: {
+        contentType: {
+          projectId,
+          type: "COMPONENT"
+        }
+      },
+      include: {
+        contentType: true
+      }
+    });
+    return { success: true, data: entries };
+  } catch (error) {
+    console.error("Fetch Global Components Error:", error);
+    return { success: false, data: [] };
+  }
+}
+

@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { deletePage } from "@/app/builder/_actions/page-actions";
+import { deletePage, updatePageName } from "@/app/builder/_actions/page-actions";
 import { createNewField, reorderFields, updateField, deleteField } from "@/app/builder/_actions/field-actions";
 import { createFieldGroup, deleteFieldGroup } from "@/app/builder/_actions/group-actions";
+import { savePageComponents } from "@/app/builder/_actions/content-type-actions"; // Added import
 import {
-  MoreVertical, Trash2, FolderPlus, Plus, X, Type,
-  Image as ImageIcon, Hash, Calendar, MapPin, Layers, Link as LinkIcon, Loader2, Menu, Settings, ChevronUp, Layout // <-- SUDAH DITAMBAHKAN
+  MoreVertical, Trash2, FolderPlus, Plus, X, Type, Box, Edit3,
+  Image as ImageIcon, Hash, Calendar, MapPin, Layers, Link as LinkIcon, Loader2, Menu, Settings, ChevronUp, Layout
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -20,6 +21,7 @@ const fieldTypes = [
   { slug: "location", icon: MapPin, title: "Location", color: "bg-red-500", desc: "Geographic data, maps." },
   { slug: "multiple", icon: Layers, title: "Multiple Content", color: "bg-indigo-500", desc: "Flexible component combinations." },
   { slug: "relation", icon: LinkIcon, title: "Relation", color: "bg-pink-500", desc: "Link entries across content types." },
+  { slug: "component", icon: Box, title: "Component", color: "bg-blue-600", desc: "Embed reusable components like Navbar/Footer." },
 ];
 
 export default function SinglePageBuilderClient({ initialData, projectId, pageId, allContentTypes = [] }: any) {
@@ -29,6 +31,10 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+
+  // New State for Attached Components
+  const [isComponentModalOpen, setIsComponentModalOpen] = useState(false);
+  const [attachedComponents, setAttachedComponents] = useState<string[]>([]);
 
   const [selectedType, setSelectedType] = useState<any>(null);
   const [fieldName, setFieldName] = useState("");
@@ -41,6 +47,8 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
   const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditPageModalOpen, setIsEditPageModalOpen] = useState(false);
+  const [newPageName, setNewPageName] = useState(initialData.name);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Validation & Options State
@@ -56,11 +64,15 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
     if (initialData.fieldGroups) {
       setFieldGroups(initialData.fieldGroups);
     }
+    if (initialData.usedComponents) {
+      setAttachedComponents(initialData.usedComponents.map((c: any) => c.id));
+    }
   }, [initialData]);
+
 
   // Auto-generate API ID
   useEffect(() => {
-    if (!editingFieldId && fieldName) {
+    if (fieldName) {
       const generated = fieldName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '_');
       setApiId(generated);
     }
@@ -152,7 +164,7 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
           apiId: apiId,
           isRequired,
           isUnique,
-          options: selectedType.slug === 'relation' ? { relatedTypeId: relationTarget } : undefined
+          options: selectedType.slug === 'relation' || selectedType.slug === 'component' ? { relatedTypeId: relationTarget } : undefined
         });
 
         if (result.success) {
@@ -172,7 +184,7 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
         });
 
         if (result.success) {
-          if (selectedType.slug === 'relation' && relationTarget) {
+          if ((selectedType.slug === 'relation' || selectedType.slug === 'component') && relationTarget) {
             await updateField({
               fieldId: result.data!.id,
               projectId,
@@ -204,6 +216,32 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
     }
   };
 
+  const handleUpdatePageName = async () => {
+    if (!newPageName) return alert("Please enter page name");
+    setIsLoading(true);
+    const result = await updatePageName(pageId, newPageName, projectId);
+    if (result.success) {
+      setIsEditPageModalOpen(false);
+      router.refresh();
+    } else {
+      alert("Failed to update page name");
+    }
+    setIsLoading(false);
+  };
+
+  const handleSaveComponents = async () => {
+    setIsLoading(true);
+    const res = await savePageComponents(pageId, attachedComponents);
+    if (res.success) {
+      setIsComponentModalOpen(false);
+      router.refresh();
+    } else {
+      alert("Failed to save components");
+    }
+    setIsLoading(false);
+  };
+
+
   // --- LOGIKA DRAG AND DROP ---
   const onDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
@@ -211,10 +249,10 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
 
     // Clone state groups
     const newFieldGroups = [...fieldGroups];
-    
+
     // Cari group asal dan tujuan
     const sourceGroupIndex = newFieldGroups.findIndex(g => g.id === result.source.droppableId);
-    
+
     if (sourceGroupIndex === -1) return;
 
     const group = { ...newFieldGroups[sourceGroupIndex] };
@@ -261,6 +299,12 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
                   <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"><MoreVertical size={16} className="text-gray-400 dark:text-slate-500" /></button>
                   {isDropdownOpen && (
                     <div className="absolute top-8 left-0 bg-white dark:bg-slate-900 shadow-xl border border-gray-200 dark:border-slate-800 rounded-lg p-1 w-48 z-50 animate-in fade-in zoom-in-95">
+                      <button
+                        onClick={() => { setIsEditPageModalOpen(true); setIsDropdownOpen(false); }}
+                        className="flex items-center gap-2 text-gray-700 dark:text-gray-300 text-sm p-2 w-full hover:bg-gray-50 dark:hover:bg-slate-800 rounded-md transition-colors font-bold"
+                      >
+                        <Edit3 size={14} /> Edit Name
+                      </button>
                       <button onClick={handleDeletePage} className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm p-2 w-full hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors font-bold">
                         {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Delete Page
                       </button>
@@ -272,6 +316,12 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
             </div>
           </div>
           <div className="flex gap-3">
+            <button
+              onClick={() => setIsComponentModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-900/50 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95"
+            >
+              <Box size={16} /> Components
+            </button>
             <button
               onClick={() => setIsGroupModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95"
@@ -336,7 +386,7 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
                     {/* AREA DROPPABLE */}
                     <Droppable droppableId={group.id} type="FIELD">
                       {(provided) => (
-                        <div 
+                        <div
                           className="p-4 bg-white dark:bg-slate-900 space-y-2 min-h-[50px]"
                           ref={provided.innerRef}
                           {...provided.droppableProps}
@@ -358,13 +408,13 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
                                       )}
                                     >
                                       <div className="flex items-center gap-4">
-                                        <div 
+                                        <div
                                           {...provided.dragHandleProps}
                                           className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-gray-400 dark:text-slate-600"
                                         >
                                           <Menu size={16} />
                                         </div>
-                                        
+
                                         <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm border-b-2 border-black/10", typeDef.color)}>
                                           <typeDef.icon size={18} />
                                         </div>
@@ -488,21 +538,34 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
               </div>
             </div>
 
-            {selectedType?.slug === 'relation' && (
+            {(selectedType?.slug === 'relation' || selectedType?.slug === 'component') && (
               <div className="space-y-4">
-                <h4 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest px-1">Konfigurasi Relasi</h4>
-                <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-pink-100 dark:border-pink-900/30 shadow-sm space-y-4 transition-colors">
+                <h4 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest px-1">
+                  {selectedType?.slug === 'relation' ? 'Konfigurasi Relasi' : 'Pilih Component'}
+                </h4>
+                <div className={cn(
+                  "p-5 bg-white dark:bg-slate-900 rounded-xl border shadow-sm space-y-4 transition-colors",
+                  selectedType?.slug === 'relation' ? "border-pink-100 dark:border-pink-900/30" : "border-blue-100 dark:border-blue-900/30"
+                )}>
                   <div>
-                    <label className="text-xs font-bold text-gray-700 dark:text-slate-300 block mb-2 px-1">Hubungkan Ke Content Model</label>
+                    <label className="text-xs font-bold text-gray-700 dark:text-slate-300 block mb-2 px-1">
+                      {selectedType?.slug === 'relation' ? 'Hubungkan Ke Content Model' : 'Embed Component'}
+                    </label>
                     <select
                       value={relationTarget}
                       onChange={(e) => setRelationTarget(e.target.value)}
-                      className="w-full p-3 rounded-lg bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-pink-500 dark:focus:ring-pink-600 text-sm font-bold transition-all text-gray-900 dark:text-slate-100"
+                      className={cn(
+                        "w-full p-3 rounded-lg bg-gray-50 dark:bg-slate-950 border outline-none focus:ring-2 text-sm font-bold transition-all text-gray-900 dark:text-slate-100",
+                        selectedType?.slug === 'relation' ? "border-gray-200 dark:border-slate-800 focus:ring-pink-500 dark:focus:ring-pink-600" : "border-gray-200 dark:border-slate-800 focus:ring-blue-500 dark:focus:ring-blue-600"
+                      )}
                     >
-                      <option value="">-- Pilih Model --</option>
-                      {allContentTypes.map((ct: any) => (
-                        <option key={ct.id} value={ct.id}>{ct.name}</option>
-                      ))}
+                      <option value="">-- Pilih {selectedType?.slug === 'relation' ? 'Model' : 'Component'} --</option>
+                      {allContentTypes
+                        .filter((ct: any) => selectedType?.slug === 'relation' ? true : ct.type === 'COMPONENT')
+                        .map((ct: any) => (
+                          <option key={ct.id} value={ct.id}>{ct.name}</option>
+                        ))
+                      }
                     </select>
                   </div>
                 </div>
@@ -593,6 +656,95 @@ export default function SinglePageBuilderClient({ initialData, projectId, pageId
           </div>
         </div>
       )}
+      {isEditPageModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 px-4">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-slate-800">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/30"><Edit3 size={24} /></div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Edit Page Name</h2>
+              </div>
+              <button onClick={() => setIsEditPageModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X size={24} className="text-gray-400 dark:text-slate-500" /></button>
+            </div>
+            <div className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-gray-500 dark:text-slate-500 block mb-2 uppercase tracking-[0.2em] px-1">Page Name</label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={newPageName}
+                  onChange={(e) => setNewPageName(e.target.value)}
+                  placeholder="Enter new page name"
+                  className="w-full p-4 rounded-xl bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 font-bold text-gray-900 dark:text-slate-100 transition-all shadow-inner placeholder:text-gray-300 dark:placeholder:text-slate-700"
+                />
+              </div>
+              <button
+                onClick={handleUpdatePageName}
+                disabled={isLoading || !newPageName}
+                className="w-full py-4 bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500 text-white font-black rounded-xl shadow-2xl shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 border-b-2 border-blue-800 dark:border-blue-700"
+              >
+                {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
+                Update Name
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isComponentModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 px-4">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl w-full max-w-lg animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-slate-800">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg text-orange-600 dark:text-orange-400 border border-orange-200/50 dark:border-orange-800/30"><Box size={24} /></div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Attach Components</h2>
+              </div>
+              <button onClick={() => setIsComponentModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X size={24} className="text-gray-400 dark:text-slate-500" /></button>
+            </div>
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+              <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Select components to be available for this page in Content Management.</p>
+
+              {allContentTypes
+                .filter((ct: any) => ct.type === 'COMPONENT')
+                .map((comp: any) => (
+                  <label key={comp.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-950/50 rounded-xl border border-gray-100 dark:border-slate-800 cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white dark:bg-slate-900 rounded-lg shadow-sm">
+                        <Box size={16} className="text-gray-600 dark:text-slate-400" />
+                      </div>
+                      <span className="font-bold text-gray-800 dark:text-slate-200">{comp.name}</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={attachedComponents.includes(comp.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setAttachedComponents([...attachedComponents, comp.id]);
+                        else setAttachedComponents(attachedComponents.filter(id => id !== comp.id));
+                      }}
+                      className="w-5 h-5 rounded border-gray-300 dark:border-slate-700 text-orange-600 focus:ring-orange-500"
+                    />
+                  </label>
+                ))
+              }
+
+              {allContentTypes.filter((ct: any) => ct.type === 'COMPONENT').length === 0 && (
+                <div className="p-8 text-center text-gray-400 italic">No components available. Create one first!</div>
+              )}
+            </div>
+
+            <button
+              onClick={handleSaveComponents}
+              disabled={isLoading}
+              className="w-full mt-6 py-4 bg-orange-600 dark:bg-orange-600 hover:bg-orange-700 dark:hover:bg-orange-500 text-white font-black rounded-xl shadow-2xl shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 border-b-2 border-orange-800 dark:border-orange-700"
+            >
+              {isLoading ? <Loader2 className="animate-spin" size={20} /> : null}
+              Save Components
+            </button>
+          </div>
+        </div>
+      )}
     </div>
+
+
   );
 }

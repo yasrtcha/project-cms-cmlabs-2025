@@ -48,3 +48,20 @@ export async function deleteFieldGroup(groupId: string, projectId: string) {
         return { success: false, error: "Failed to delete group" };
     }
 }
+
+export async function reorderFieldGroups(items: { id: string, order: number }[], projectId: string) {
+    try {
+        const updates = items.map(item =>
+            prisma.builderFieldGroup.update({
+                where: { id: item.id },
+                data: { order: item.order }
+            })
+        );
+        await prisma.$transaction(updates);
+        revalidatePath(`/builder/${projectId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Error reordering field groups:", error);
+        return { success: false, error: "Failed to reorder groups" };
+    }
+}

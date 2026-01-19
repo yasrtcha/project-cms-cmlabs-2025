@@ -466,6 +466,12 @@ model BuilderContentType {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Many-to-Many: Page uses multiple Components, Component used in multiple Pages
+  usedComponents     BuilderContentType[] @relation("PageComponents")
+  usedInPages        BuilderContentType[] @relation("PageComponents")
+
+  sectionsOrder      Json?     // Stores the order of interleaved FieldGroups and Components
+
   @@unique([projectId, slug])
   @@index([projectId])
   @@index([workflowId])
