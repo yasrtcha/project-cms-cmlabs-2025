@@ -1,7 +1,7 @@
 "use client";
 
-import { createWorkflow } from "@/app/builder/_actions/settings-actions"; // Import Server Action
-import { useState } from "react";
+import { createWorkflow, getProjectRoles, getContentTypes } from "@/app/builder/_actions/settings-actions"; // Import getContentTypes
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { 
   ArrowLeft, 
@@ -13,10 +13,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Note: Idealnya ini diambil dari DB via prop, tapi hardcoded untuk simplifikasi UI saat ini
-const contentTypes = ["Blog Post", "Page", "Author", "Category", "Product"]; 
-const roles = ["Editor", "Chief Editor", "Legal Team", "Administrator", "Project Manager"];
-
 export default function CreateWorkflowPage() {
   const router = useRouter();
   const params = useParams();
@@ -25,21 +21,44 @@ export default function CreateWorkflowPage() {
   const backUrl = `/builder/${params.projectId}/settings/workflow`;
 
   // --- STATE ---
+  const [availableRoles, setAvailableRoles] = useState<{id: string, name: string}[]>([]);
+  const [availableContentTypes, setAvailableContentTypes] = useState<{id: string, name: string}[]>([]); // New State
+
   const [basicInfo, setBasicInfo] = useState({
     name: "",
-    contentType: "",
+    contentType: "", // Ini akan menyimpan nama content type (atau ID jika ingin diubah logic-nya)
     description: "",
   });
 
   const [steps, setSteps] = useState([
-    { id: Date.now(), name: "Review Stage 1", assignee: "" }
+    { id: Date.now(), name: "Review Stage 1", roleId: "" }
   ]);
+
+  // --- FETCH DATA ON LOAD ---
+  useEffect(() => {
+    async function fetchData() {
+        if (params.projectId) {
+            // Fetch Roles
+            const rolesRes = await getProjectRoles(params.projectId as string);
+            if (rolesRes.success && rolesRes.data) {
+                setAvailableRoles(rolesRes.data);
+            }
+
+            // Fetch Content Types
+            const typesRes = await getContentTypes(params.projectId as string);
+            if (typesRes.success && typesRes.data) {
+                setAvailableContentTypes(typesRes.data);
+            }
+        }
+    }
+    fetchData();
+  }, [params.projectId]);
 
   // --- HANDLERS ---
   const addStep = () => {
     setSteps([
       ...steps,
-      { id: Date.now(), name: `Review Stage ${steps.length + 1}`, assignee: "" }
+      { id: Date.now(), name: `Review Stage ${steps.length + 1}`, roleId: "" }
     ]);
   };
 
@@ -51,30 +70,33 @@ export default function CreateWorkflowPage() {
     setSteps(steps.filter(step => step.id !== id));
   };
 
-  const updateStep = (id: number, field: 'name' | 'assignee', value: string) => {
+  const updateStep = (id: number, field: 'name' | 'roleId', value: string) => {
     setSteps(steps.map(step => 
         step.id === id ? { ...step, [field]: value } : step
     ));
   };
 
   const handleSave = async () => {
-    // 1. Validasi
     if (!basicInfo.name || !basicInfo.contentType) {
         alert("Please fill in Workflow Name and Content Type.");
+        return;
+    }
+
+    const incompleteStep = steps.find(s => !s.roleId);
+    if (incompleteStep) {
+        alert("Please select a role for all approval steps.");
         return;
     }
     
     setIsLoading(true);
 
-    // 2. Siapkan Data
     const payload = {
         name: basicInfo.name,
         description: basicInfo.description,
         contentType: basicInfo.contentType,
-        steps: steps // Array: [{name, assignee}, ...]
+        steps: steps 
     };
 
-    // 3. Panggil Server Action
     const result = await createWorkflow(params.projectId as string, payload);
 
     setIsLoading(false);
@@ -89,7 +111,7 @@ export default function CreateWorkflowPage() {
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-8 min-h-screen bg-white dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans">
       
-      {/* === HEADER === */}
+      {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-100 dark:border-slate-800 pb-6">
         <div className="space-y-1">
           <button 
@@ -117,7 +139,7 @@ export default function CreateWorkflowPage() {
 
       <div className="space-y-8">
         
-        {/* === SECTION 1: BASIC INFORMATION === */}
+        {/* SECTION 1: BASIC INFORMATION */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -143,9 +165,14 @@ export default function CreateWorkflowPage() {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1e293b] border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] appearance-none cursor-pointer text-gray-900 dark:text-white"
                 >
                 <option value="">Select Content Type</option>
-                {contentTypes.map((ct) => (
-                    <option key={ct} value={ct}>{ct}</option>
-                ))}
+                {/* Render Content Types dari Database */}
+                {availableContentTypes.length > 0 ? (
+                    availableContentTypes.map((ct) => (
+                        <option key={ct.id} value={ct.name}>{ct.name}</option>
+                    ))
+                ) : (
+                    <option disabled>No content types available</option>
+                )}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -167,7 +194,7 @@ export default function CreateWorkflowPage() {
           </div>
         </div>
 
-        {/* === SECTION 2: APPROVAL STEPS === */}
+        {/* SECTION 2: APPROVAL STEPS */}
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <GitPullRequest size={20} className="text-[#3B82F6]" />
@@ -205,14 +232,18 @@ export default function CreateWorkflowPage() {
 
                   <div className="flex-1 relative">
                     <select 
-                        value={step.assignee}
-                        onChange={(e) => updateStep(step.id, 'assignee', e.target.value)}
+                        value={step.roleId}
+                        onChange={(e) => updateStep(step.id, 'roleId', e.target.value)}
                         className="w-full px-4 py-2.5 bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] appearance-none cursor-pointer text-gray-900 dark:text-white"
                     >
                         <option value="">Select Role</option>
-                        {roles.map((role) => (
-                            <option key={role} value={role}>{role}</option>
-                        ))}
+                        {availableRoles.length > 0 ? (
+                            availableRoles.map((role) => (
+                                <option key={role.id} value={role.id}>{role.name}</option>
+                            ))
+                        ) : (
+                            <option disabled>Loading roles...</option>
+                        )}
                     </select>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>

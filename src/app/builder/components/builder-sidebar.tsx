@@ -277,11 +277,10 @@ export function BuilderSidebar({
                 )}
               </div>
 
-              {/* 2.3 Global Components - HIDDEN AS PER REQUEST (Components are now integrated into pages) */}
-              {/* 
+              {/* 2.3 Global Components (MODIFIED: Direct Edit Logic) */}
               <div>
                 <div className="flex items-center justify-between mb-2 cursor-pointer group" onClick={() => toggleManagement("component")}>
-                  <h3 className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-green-600">Components</h3>
+                  <h3 className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-green-600">Global Components</h3>
                   {managementOpen.component ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
                 </div>
 
@@ -292,10 +291,11 @@ export function BuilderSidebar({
                     {components.map((comp) => (
                       <Link
                         key={comp.id}
-                        href={`/builder/${projectId}/content-management/collection/${comp.id}`}
+                        // PERUBAHAN UTAMA: Mengarah ke /single/ bukan /collection/
+                        href={`/builder/${projectId}/content-management/single/${comp.id}`} 
                         className={cn(
                           "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all",
-                          pathname.includes(`/content-management/collection/${comp.id}`)
+                          pathname.includes(`/content-management/single/${comp.id}`)
                             ? "bg-green-50 text-green-700 font-medium dark:bg-green-900/20 dark:text-green-400"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
                         )}
@@ -307,12 +307,11 @@ export function BuilderSidebar({
                   </div>
                 )}
               </div> 
-              */}
             </div>
           </div>
 
           {/* ============================================================ */}
-          {/* 3. MAIN SETTINGS (Sesuai Gambar)                             */}
+          {/* 3. MAIN SETTINGS                                             */}
           {/* ============================================================ */}
           <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
             <div
@@ -358,13 +357,13 @@ export function BuilderSidebar({
                   <span className="truncate">Workflow Approval</span>
                 </Link>
 
-                {/* API and Integration (Highlight) */}
+                {/* API and Integration */}
                 <Link
                   href={`/builder/${projectId}/settings/api-integration`}
                   className={cn(
                     "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all",
                     pathname.includes("/settings/api-integration")
-                      ? "bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/20 dark:text-blue-400" // Highlighted style
+                      ? "bg-blue-50 text-blue-600 font-medium dark:bg-blue-900/20 dark:text-blue-400"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
                   )}
                 >

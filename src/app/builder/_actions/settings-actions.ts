@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from "uuid"
 // ============================================================================
 
 /**
- * Membuat API Token baru
+ * Membuat API Token baru & Mencatat Activity Log
  */
 export async function createApiToken(projectId: string, formData: {
   name: string;
@@ -25,7 +25,7 @@ export async function createApiToken(projectId: string, formData: {
       return { success: false, error: "Unauthorized" };
     }
 
-    // 1. Generate Token Rahasia (Contoh: wf_sk_12345...)
+    // 1. Generate Token Rahasia
     const secretToken = `wf_sk_${uuidv4().replace(/-/g, "")}`;
 
     // 2. Hitung Tanggal Kadaluarsa
@@ -39,22 +39,36 @@ export async function createApiToken(projectId: string, formData: {
     } else if (formData.validity === "90 Days") {
       expiresAt = new Date(now.setDate(now.getDate() + 90));
     }
-    // Jika "Forever", expiresAt tetap null
 
-    // 3. Simpan ke Database
-    await prisma.apiToken.create({
-      data: {
-        name: formData.name,
-        description: formData.description,
-        token: secretToken,
-        scope: formData.scope,
-        permissions: formData.permissions, // JSON object dari frontend
-        expiresAt: expiresAt,
-        projectId: projectId,
-      },
+    // 3. Database Transaction (Simpan Token + Catat Log)
+    await prisma.$transaction(async (tx) => {
+      // A. Simpan Token
+      const token = await tx.apiToken.create({
+        data: {
+          name: formData.name,
+          description: formData.description,
+          token: secretToken,
+          scope: formData.scope,
+          permissions: formData.permissions,
+          expiresAt: expiresAt,
+          projectId: projectId,
+        },
+      });
+
+      // B. Catat Activity Log
+      await tx.activityLog.create({
+        data: {
+          action: "CREATE_API_TOKEN",
+          entityType: "ApiToken",
+          entityId: token.id,
+          entityName: token.name,
+          userId: session.user.id!,
+          projectId: projectId,
+          details: { scope: formData.scope, validity: formData.validity }
+        }
+      });
     });
 
-    // 4. Refresh Halaman List
     revalidatePath(`/builder/${projectId}/settings/api-integration`);
     return { success: true };
 
@@ -65,19 +79,35 @@ export async function createApiToken(projectId: string, formData: {
 }
 
 /**
- * Menghapus API Token
+ * Menghapus API Token & Mencatat Log
  */
 export async function deleteApiToken(projectId: string, tokenId: string) {
   try {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
-    // Pastikan token milik project yang benar
-    await prisma.apiToken.delete({
-      where: { 
-        id: tokenId, 
-        projectId: projectId 
-      }, 
+    await prisma.$transaction(async (tx) => {
+      // 1. Ambil data dulu untuk log (sebelum dihapus)
+      const token = await tx.apiToken.findUnique({ where: { id: tokenId } });
+      
+      if (token) {
+        // 2. Hapus Token
+        await tx.apiToken.delete({
+          where: { id: tokenId, projectId: projectId }, 
+        });
+
+        // 3. Catat Log
+        await tx.activityLog.create({
+          data: {
+            action: "DELETE_API_TOKEN",
+            entityType: "ApiToken",
+            entityId: tokenId,
+            entityName: token.name,
+            userId: session.user.id!,
+            projectId: projectId,
+          }
+        });
+      }
     });
 
     revalidatePath(`/builder/${projectId}/settings/api-integration`);
@@ -109,19 +139,55 @@ export async function getApiTokens(projectId: string) {
 // ============================================================================
 
 /**
- * Membuat Workflow Approval Baru dengan Steps
+ * Helper: Mengambil Daftar Role untuk Dropdown
+ */
+export async function getProjectRoles(projectId: string) {
+  try {
+    const roles = await prisma.role.findMany({
+      where: {
+        OR: [
+          { projectId: projectId }, 
+          { projectId: null }       
+        ]
+      },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    });
+    return { success: true, data: roles };
+  } catch (error) {
+    return { success: false, data: [] };
+  }
+}
+
+/**
+ * Helper: Mengambil Daftar Content Type untuk Dropdown
+ */
+export async function getContentTypes(projectId: string) {
+  try {
+    const types = await prisma.builderContentType.findMany({
+      where: { projectId },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    });
+    return { success: true, data: types };
+  } catch (error) {
+    return { success: false, data: [] };
+  }
+}
+
+/**
+ * Membuat Workflow Approval Baru + Steps + Log
  */
 export async function createWorkflow(projectId: string, data: {
   name: string;
   description: string;
-  contentType: string; // Nama content type (e.g., "Blog Post")
-  steps: { name: string; assignee: string }[];
+  contentType: string; 
+  steps: { name: string; roleId: string }[]; 
 }) {
   try {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
-    // Gunakan Transaction agar Workflow Header dan Steps tersimpan atomic (sekaligus)
     await prisma.$transaction(async (tx) => {
       
       // 1. Buat Header Workflow
@@ -134,54 +200,50 @@ export async function createWorkflow(projectId: string, data: {
         }
       });
 
-      // 2. Cari ContentType berdasarkan nama (opsional, jika ingin link relasi)
-      // Di form frontend Anda menggunakan nama string, kita bisa cari ID-nya jika perlu
-      // Untuk sekarang, kita simpan relasi nanti jika skema mendukung string langsung
-      // Atau abaikan jika hanya simulasi. Tapi di schema ada `appliedContentTypes`.
-      
-      // -- LOGIKA MENGHUBUNGKAN KE CONTENT TYPE --
-      const targetContentType = await tx.builderContentType.findFirst({
-        where: { projectId, name: data.contentType }
-      });
-
-      if (targetContentType) {
-        await tx.builderContentType.update({
-          where: { id: targetContentType.id },
-          data: { workflowId: workflow.id, hasWorkflow: true }
+      // 2. Hubungkan ke Content Type (Jika dipilih)
+      if (data.contentType) {
+        const targetContentType = await tx.builderContentType.findFirst({
+            where: { projectId, name: data.contentType }
         });
+
+        if (targetContentType) {
+            await tx.builderContentType.update({
+            where: { id: targetContentType.id },
+            data: { workflowId: workflow.id, hasWorkflow: true }
+            });
+        }
       }
 
-      // 3. Buat Steps (Looping array dari form)
+      // 3. Buat Steps
       for (let i = 0; i < data.steps.length; i++) {
         const step = data.steps[i];
         
-        // Cari Role ID berdasarkan nama Role yang dipilih di dropdown
-        // (Misal: "Editor", "Legal Team")
-        let roleId = null;
-        if (step.assignee) {
-            const role = await tx.role.findFirst({
-                where: { 
-                  name: step.assignee, 
-                  // Cari role global (projectId null) ATAU role project ini
-                  OR: [
-                    { projectId: projectId },
-                    { projectId: null } 
-                  ]
-                }
-            });
-            roleId = role?.id;
-        }
-
-        // Simpan Step
         await tx.workflowStep.create({
           data: {
             name: step.name,
-            order: i + 1, // Urutan step: 1, 2, 3...
+            order: i + 1,
             workflowId: workflow.id,
-            roleId: roleId, 
+            roleId: step.roleId || null, 
           }
         });
       }
+
+      // 4. Catat Activity Log
+      await tx.activityLog.create({
+        data: {
+          action: "CREATE_WORKFLOW",
+          entityType: "Workflow",
+          entityId: workflow.id,
+          entityName: workflow.name,
+          userId: session.user.id!,
+          projectId: projectId,
+          details: { 
+            stepsCount: data.steps.length,
+            appliedTo: data.contentType || "None"
+          }
+        }
+      });
+
     });
 
     revalidatePath(`/builder/${projectId}/settings/workflow`);
@@ -201,9 +263,9 @@ export async function getWorkflows(projectId: string) {
     const workflows = await prisma.workflow.findMany({
       where: { projectId },
       include: {
-        steps: true, // Ambil juga detail steps-nya untuk dihitung jumlahnya
+        steps: true,
         appliedContentTypes: {
-          select: { name: true } // Ambil nama content type yang pakai workflow ini
+          select: { name: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -215,21 +277,65 @@ export async function getWorkflows(projectId: string) {
 }
 
 /**
- * Menghapus Workflow
+ * Menghapus Workflow + Log
  */
 export async function deleteWorkflow(projectId: string, workflowId: string) {
   try {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: "Unauthorized" };
 
-    // Hapus workflow (Cascade delete akan menghapus steps juga otomatis)
-    await prisma.workflow.delete({
-      where: { id: workflowId, projectId },
+    await prisma.$transaction(async (tx) => {
+      // 1. Ambil nama dulu untuk log
+      const workflow = await tx.workflow.findUnique({ where: { id: workflowId } });
+
+      if (workflow) {
+        // 2. Hapus Workflow
+        await tx.workflow.delete({
+          where: { id: workflowId, projectId },
+        });
+
+        // 3. Catat Log
+        await tx.activityLog.create({
+          data: {
+            action: "DELETE_WORKFLOW",
+            entityType: "Workflow",
+            entityId: workflowId,
+            entityName: workflow.name,
+            userId: session.user.id!,
+            projectId: projectId,
+          }
+        });
+      }
     });
 
     revalidatePath(`/builder/${projectId}/settings/workflow`);
     return { success: true };
   } catch (error) {
     return { success: false, error: "Failed to delete workflow" };
+  }
+}
+
+// ============================================================================
+// 3. ACTIVITY LOG ACTIONS
+// ============================================================================
+
+/**
+ * Mengambil Data Activity Log Project
+ */
+export async function getProjectActivityLogs(projectId: string) {
+  try {
+    const logs = await prisma.activityLog.findMany({
+      where: { projectId },
+      include: {
+        user: {
+          select: { name: true, email: true, image: true } 
+        }
+      },
+      orderBy: { createdAt: 'desc' }, 
+      take: 50 
+    });
+    return { success: true, data: logs };
+  } catch (error) {
+    return { success: false, data: [] };
   }
 }

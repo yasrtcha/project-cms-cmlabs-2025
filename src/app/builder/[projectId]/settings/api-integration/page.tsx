@@ -2,17 +2,24 @@ import Link from "next/link";
 import { getApiTokens, deleteApiToken } from "@/app/builder/_actions/settings-actions"; // Import Actions
 import { 
   Plus, 
-  Trash2, 
   Pencil, 
   Key
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DeleteTokenButton } from "./delete-button"; // Kita buat tombol delete terpisah
+import { revalidatePath } from "next/cache";
+import SafeDeleteButton from "@/components/safe-delete-button"; // Import Tombol Aman
 
 // Komponen Utama (Server Component)
 export default async function ApiIntegrationPage({ params }: { params: { projectId: string } }) {
   // 1. Ambil data asli dari Database
   const { data: tokens } = await getApiTokens(params.projectId);
+
+  // Wrapper untuk delete action
+  async function handleDelete(id: string) {
+    "use server";
+    await deleteApiToken(params.projectId, id);
+    revalidatePath(`/builder/${params.projectId}/settings/api-integration`);
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8 min-h-screen bg-white dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 transition-colors duration-300">
@@ -76,10 +83,13 @@ export default async function ApiIntegrationPage({ params }: { params: { project
                     </td>
                     <td className="px-6 py-4 align-top">
                       <div className="flex items-center justify-center gap-3">
-                        {/* Tombol Delete (Client Component Kecil) */}
-                        <DeleteTokenButton 
-                           projectId={params.projectId} 
-                           tokenId={token.id} 
+                        
+                        {/* Tombol Safe Delete */}
+                        <SafeDeleteButton 
+                            id={token.id}
+                            onDelete={handleDelete}
+                            title={`Revoke Token "${token.name}"?`}
+                            warningMessage="Any application using this token will instantly lose access to your CMS."
                         />
                         
                         <button 

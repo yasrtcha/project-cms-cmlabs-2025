@@ -2,19 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Image as ImageIcon, Link as LinkIcon, ChevronDown, Loader2, ExternalLink, Trash2, Search, ArrowLeft, Plus, Box, Menu } from "lucide-react";
+import { Save, Image as ImageIcon, ChevronDown, Loader2, ExternalLink, Trash2, Search, ArrowLeft, Plus, Box, Menu, Settings } from "lucide-react";
 import { saveContentEntry, getRelationOptions } from "@/app/builder/_actions/content-entry-actions";
-import { reorderFieldGroups } from "@/app/builder/_actions/group-actions";
+import { uploadFile } from "@/app/builder/_actions/upload-actions";
 import { saveSectionsOrder } from "@/app/builder/_actions/content-type-actions";
 import { cn } from "@/lib/utils";
+import { AsyncRelationSelect } from "./async-relation-select";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 // =========================================================
-// 1. SUB-KOMPONEN: RENDER FIELD (INPUT DINAMIS)
+// 1. SUB-KOMPONEN: RENDER FIELD
 // =========================================================
 const RenderField = ({ field, value, onChange, componentSchemas = [] }: any) => {
   const [relationOptions, setRelationOptions] = useState<{ value: string, label: string }[]>([]);
   const [loadingRel, setLoadingRel] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (field.type === 'relation' && field.options?.relatedTypeId) {
@@ -26,6 +28,24 @@ const RenderField = ({ field, value, onChange, componentSchemas = [] }: any) => 
         });
     }
   }, [field.type, field.options]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    setUploading(true);
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await uploadFile(formData);
+
+    if (res.success && res.url) {
+      onChange(res.url);
+    } else {
+      alert("Upload failed: " + res.error);
+    }
+    setUploading(false);
+  };
 
   const inputClass = "w-full p-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400";
 
@@ -57,12 +77,14 @@ const RenderField = ({ field, value, onChange, componentSchemas = [] }: any) => 
         <div className="relative group w-full">
           {value ? (
             <div className="relative border border-gray-200 rounded-xl overflow-hidden bg-gray-50 p-4 flex items-center gap-4 w-full">
-              <div className="w-20 h-20 bg-white rounded-lg border border-gray-200 flex items-center justify-center shrink-0">
-                <ImageIcon className="text-blue-500" size={32} />
+              <div className="w-20 h-20 bg-white rounded-lg border border-gray-200 flex items-center justify-center shrink-0 overflow-hidden">
+                <img src={value} alt="Preview" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-gray-800 truncate">{value}</p>
-                <p className="text-xs text-green-600 flex items-center gap-1 mt-1"><ExternalLink size={10} /> Media Asset Uploaded</p>
+                <p className="text-sm font-bold text-gray-800 truncate">{value.split('/').pop()}</p>
+                <a href={value} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-1">
+                    <ExternalLink size={10} /> View Full Image
+                </a>
               </div>
               <button
                 onClick={() => onChange("")}
@@ -73,82 +95,66 @@ const RenderField = ({ field, value, onChange, componentSchemas = [] }: any) => 
               </button>
             </div>
           ) : (
-            <label className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer flex flex-col items-center justify-center gap-3 group-hover:border-blue-400 w-full">
-              <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                <ImageIcon className="text-gray-400 group-hover:text-blue-500" size={24} />
-              </div>
-              <div>
-                <p className="text-base font-bold text-gray-700 group-hover:text-blue-600">Click to upload image</p>
-                <p className="text-sm text-gray-400 mt-1">SVG, PNG, JPG or GIF</p>
-              </div>
-              <input
-                type="file"
-                className="hidden"
-                onChange={() => {
-                  setTimeout(() => onChange("https://via.placeholder.com/600x400"), 500);
-                }}
-              />
+            <label className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer flex flex-col items-center justify-center gap-3 group-hover:border-blue-400 w-full relative">
+              {uploading ? (
+                 <div className="flex flex-col items-center">
+                    <Loader2 className="animate-spin text-blue-500 mb-2" size={24} />
+                    <span className="text-sm text-gray-500">Uploading...</span>
+                 </div>
+              ) : (
+                <>
+                    <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <ImageIcon className="text-gray-400 group-hover:text-blue-500" size={24} />
+                    </div>
+                    <div>
+                        <p className="text-base font-bold text-gray-700 group-hover:text-blue-600">Click to upload image</p>
+                        <p className="text-sm text-gray-400 mt-1">SVG, PNG, JPG or GIF</p>
+                    </div>
+                    <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                    />
+                </>
+              )}
             </label>
           )}
         </div>
       );
 
     case "relation":
+      if (!field.options?.relatedTypeId) {
+          return <div className="text-xs text-red-500 p-2 bg-red-50 rounded">Config Error: Related Content Type ID is missing.</div>;
+      }
       return (
-        <div className="relative w-full">
-          <select
-            value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
-            className={cn(inputClass, "appearance-none cursor-pointer pr-10")}
-            disabled={loadingRel}
-          >
-            <option value="">-- Select Related Content --</option>
-            {relationOptions.map((opt: any) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <div className="absolute right-3 top-3.5 pointer-events-none text-gray-400">
-            {loadingRel ? <Loader2 size={16} className="animate-spin" /> : <ChevronDown size={16} />}
-          </div>
-          {relationOptions.length === 0 && !loadingRel && (
-            <div className="mt-2 text-[10px] text-orange-600 bg-orange-50 p-2 rounded border border-orange-100 flex items-start gap-2">
-              <span className="font-bold">Note:</span> No content found in related model.
-            </div>
-          )}
-        </div>
+        <AsyncRelationSelect
+          contentTypeId={field.options.relatedTypeId}
+          value={value || ""}
+          onChange={(val) => onChange(val)}
+          placeholder={`Select ${field.name}...`}
+        />
       );
 
+    // --- MODIFIED: COMPONENT HANDLING ---
     case "component":
       const compId = field.options?.relatedTypeId;
       const compSchema = componentSchemas.find((s: any) => s.id === compId);
-      const compValue = value || {};
-
+      
       if (!compSchema) return <div className="text-xs text-red-500">Component schema not found ({compId})</div>;
 
       const handleCompFieldChange = (subApiId: string, subVal: any) => {
-        onChange({ ...compValue, [subApiId]: subVal });
+        onChange({ ...(value || {}), [subApiId]: subVal });
       };
 
+      // Gunakan Wrapper baru di bawah
       return (
-        <div className="p-5 bg-blue-50/30 border border-blue-100 rounded-2xl space-y-6">
-          <div className="flex items-center gap-2 pb-3 border-b border-blue-100/50">
-            <Box className="text-blue-500" size={16} />
-            <span className="text-xs font-bold text-blue-700 uppercase tracking-widest">{compSchema.name}</span>
-          </div>
-          <div className="space-y-6">
-            {compSchema.fieldGroups.flatMap((g: any) => g.fields).map((subField: any) => (
-              <div key={subField.id} className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{subField.name}</label>
-                <RenderField
-                  field={subField}
-                  value={compValue[subField.apiId]}
-                  onChange={(val: any) => handleCompFieldChange(subField.apiId, val)}
-                  componentSchemas={componentSchemas}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+        <ComponentFieldWrapper 
+            schema={compSchema} 
+            value={value || {}} 
+            onChange={handleCompFieldChange} 
+            componentSchemas={componentSchemas}
+        />
       );
 
     case "multiple":
@@ -219,18 +225,14 @@ export default function ContentForm({ schema, initialData, projectId, entryId, c
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"CONTENT" | "SEO">("CONTENT");
 
-  // Data State
   const [formData, setFormData] = useState<any>(initialData?.data || {});
   const [seoData, setSeoData] = useState<any>(initialData?.seoData || {});
 
-  // UI State
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [sections, setSections] = useState<any[]>([]);
 
-  // Sinkronisasi sections jika schema berubah
   useEffect(() => {
-    console.log("Current schema sectionsOrder:", schema.sectionsOrder);
     const groups = (schema.fieldGroups || []).map((g: any) => ({ ...g, sectionType: 'GROUP' }));
     const components = (schema.usedComponents || []).map((c: any) => ({ ...c, sectionType: 'COMPONENT' }));
 
@@ -254,7 +256,7 @@ export default function ContentForm({ schema, initialData, projectId, entryId, c
     setSections(combined);
   }, [schema.fieldGroups, schema.usedComponents, schema.sectionsOrder]);
 
-  const isSinglePage = schema.type === 'SINGLE';
+  const isSinglePage = schema.type === 'SINGLE' || schema.type === 'COMPONENT'; // Treat Component as Single
   const isEditing = entryId && entryId !== 'new';
 
   const handleFieldChange = (apiId: string, val: any) => {
@@ -285,7 +287,6 @@ export default function ContentForm({ schema, initialData, projectId, entryId, c
 
     setSections(items);
 
-    // Save to DB
     const orderToSave = items.map((s: any) => ({
       type: s.sectionType,
       id: s.id
@@ -313,7 +314,7 @@ export default function ContentForm({ schema, initialData, projectId, entryId, c
         router.push(`/builder/${projectId}/content-management/collection/${schema.id}`);
       }
     } else {
-      alert("Failed to save content.");
+      alert("Failed to save content: " + res.error);
     }
   };
 
@@ -455,40 +456,18 @@ export default function ContentForm({ schema, initialData, projectId, entryId, c
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className={cn(
-                                    "bg-orange-50/30 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/30 overflow-hidden shadow-sm",
-                                    snapshot.isDragging && "shadow-xl ring-2 ring-orange-500 border-transparent"
-                                  )}>
-                                    <div className="px-6 py-4 bg-orange-100/50 dark:bg-orange-900/20 border-b border-orange-100 dark:border-orange-900/30 flex items-center justify-between group">
-                                      <div className="flex items-center gap-3">
-                                        <div
-                                          {...provided.dragHandleProps}
-                                          className="p-1 hover:bg-orange-200 dark:hover:bg-orange-800 rounded cursor-grab active:cursor-grabbing text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <Menu size={16} />
-                                        </div>
-                                        <h3 className="text-sm font-bold text-orange-800 dark:text-orange-200 uppercase tracking-wider">{section.name}</h3>
-                                      </div>
-                                      <span className="text-[10px] bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 px-2 py-1 rounded-md border border-orange-100 dark:border-orange-900/50 font-mono">{section.slug}</span>
-                                    </div>
-                                    <div className="p-6 space-y-6 bg-white/50 dark:bg-slate-900/50">
-                                      {section.fieldGroups.map((group: any) => (
-                                        <div key={group.id} className="space-y-6">
-                                          {group.fields.map((field: any) => (
-                                            <div key={field.id} className="space-y-2">
-                                              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{field.name}</label>
-                                              <RenderField
-                                                field={field}
-                                                value={formData[section.slug]?.[field.apiId]}
-                                                onChange={(val: any) => handleAttachedComponentChange(section.slug, field.apiId, val)}
-                                                componentSchemas={componentSchemas}
-                                              />
-                                            </div>
-                                          ))}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
+                                  // --- IMPROVED COMPONENT UI (Collapsible) ---
+                                  <ComponentFieldWrapper 
+                                    schema={section} 
+                                    value={formData[section.slug] || {}} 
+                                    onChange={(val: any) => {
+                                        // Update parent formData for this component
+                                        // val is the new object for this component
+                                        setFormData((prev: any) => ({ ...prev, [section.slug]: val }));
+                                    }}
+                                    componentSchemas={componentSchemas}
+                                    isTopLevel={true} // Indikator ini component top-level di page
+                                  />
                                 )}
                               </div>
                             )}
@@ -506,16 +485,7 @@ export default function ContentForm({ schema, initialData, projectId, entryId, c
           {/* TAB 2: SEO */}
           {activeTab === "SEO" && (
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-8 animate-in slide-in-from-right-4 duration-300">
-              <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100 dark:border-slate-800">
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
-                  <Search size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Search Engine Optimization</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">Control how this content appears in search engine results.</p>
-                </div>
-              </div>
-
+              {/* ... SEO Content same as before ... */}
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Meta Title</label>
@@ -528,7 +498,6 @@ export default function ContentForm({ schema, initialData, projectId, entryId, c
                     maxLength={60}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Meta Description</label>
                   <textarea
@@ -545,6 +514,70 @@ export default function ContentForm({ schema, initialData, projectId, entryId, c
 
         </div>
       </div>
+    </div>
+  );
+}
+
+// =========================================================
+// 3. SUB-KOMPONEN: WRAPPER COMPONENT (ACCORDION)
+// =========================================================
+function ComponentFieldWrapper({ schema, value, onChange, componentSchemas, isTopLevel = false }: any) {
+  // Jika Top Level (dari Page Builder), default terbuka. Jika nested, tertutup.
+  const [isOpen, setIsOpen] = useState(isTopLevel);
+
+  const handleFieldChange = (subApiId: string, subVal: any) => {
+     onChange({ ...value, [subApiId]: subVal });
+  };
+
+  return (
+    <div className={cn(
+        "border rounded-xl overflow-hidden shadow-sm transition-all",
+        isTopLevel 
+            ? "bg-orange-50/30 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30" 
+            : "bg-blue-50/30 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30"
+    )}>
+      {/* Header Klik untuk Buka/Tutup */}
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+            "flex items-center justify-between px-6 py-4 cursor-pointer transition-colors border-b",
+            isTopLevel
+                ? "bg-orange-100/50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900/30 hover:bg-orange-200/50"
+                : "bg-blue-100/50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30 hover:bg-blue-200/50"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn("p-1 rounded-md", isTopLevel ? "text-orange-500" : "text-blue-500")}>
+            {isTopLevel ? <Menu size={16} /> : <Box size={16} />}
+          </div>
+          <span className={cn("text-sm font-bold uppercase tracking-wider", isTopLevel ? "text-orange-800 dark:text-orange-200" : "text-blue-800 dark:text-blue-200")}>
+            {schema.name}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+            {isTopLevel && <span className="text-[10px] bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 px-2 py-1 rounded-md border border-orange-100 dark:border-orange-900/50 font-mono">{schema.slug}</span>}
+            <ChevronDown size={16} className={cn("text-gray-400 transition-transform duration-200", isOpen && "rotate-180")} />
+        </div>
+      </div>
+
+      {/* Body Form */}
+      {isOpen && (
+        <div className="p-6 space-y-6 bg-white/50 dark:bg-slate-900/50 animate-in slide-in-from-top-2 duration-200">
+          {(schema.fieldGroups || []).flatMap((g: any) => g.fields).map((subField: any) => (
+            <div key={subField.id} className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider pl-1">
+                {subField.name}
+              </label>
+              <RenderField
+                field={subField}
+                value={value[subField.apiId]}
+                onChange={(val: any) => handleFieldChange(subField.apiId, val)}
+                componentSchemas={componentSchemas}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -27,22 +27,23 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // OAuth Relations
-  accounts      Account[]
-  sessions      Session[]
+  accounts Account[]
+  sessions Session[]
 
   // Organization Relations
-  ownedOrganizations  Organization[]        @relation("OrganizationOwner")
+  ownedOrganizations  Organization[]       @relation("OrganizationOwner")
   organizationMembers OrganizationMember[]
+  activityLogs        ActivityLog[]
 
   // Project Relations
-  ownedProjects  Project[]        @relation("ProjectOwner")
+  ownedProjects  Project[]       @relation("ProjectOwner")
   projectMembers ProjectMember[]
 
   // Content Relations (Authoring)
   contentEntries ContentEntry[]
-  
+
   // Workflow Approvals (User melakukan approve/reject)
-  workflowLogs   ContentWorkflowLog[]
+  workflowLogs ContentWorkflowLog[]
 
   // Billing Relations
   subscriptions Subscription[]
@@ -116,111 +117,111 @@ enum SubscriptionStatus {
 
 model Plan {
   id          String   @id @default(cuid())
-  name        String   // "Free", "Starter", "Professional", "Enterprise"
+  name        String // "Free", "Starter", "Professional", "Enterprise"
   tier        PlanTier @unique
   description String?
-  price       Int      // Price in cents (0 for free)
-  
+  price       Int // Price in cents (0 for free)
+
   // Feature Limits (null = unlimited)
-  maxPersonalProjects       Int?
-  maxOrganizations          Int?
-  maxOrgProjects            Int?
-  maxTeamMembersPerOrg      Int?
+  maxPersonalProjects         Int?
+  maxOrganizations            Int?
+  maxOrgProjects              Int?
+  maxTeamMembersPerOrg        Int?
   maxContentEntriesPerProject Int?
-  maxCustomDomains          Int?
-  maxApiCallsPerMonth       Int?
-  maxMediaStorageMB         Int?
-  maxContentTypesPerProject Int?
-  maxLocalizations          Int?
-  auditLogRetentionDays     Int       @default(7)
-  
+  maxCustomDomains            Int?
+  maxApiCallsPerMonth         Int?
+  maxMediaStorageMB           Int?
+  maxContentTypesPerProject   Int?
+  maxLocalizations            Int?
+  auditLogRetentionDays       Int  @default(7)
+
   // Features
-  hasCustomDomains Boolean  @default(false)
-  hasLocalization  Boolean  @default(false)
-  hasWhiteLabel    Boolean  @default(false)
-  supportLevel     String   @default("community") // community, email, priority, dedicated
-  
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
+  hasCustomDomains Boolean @default(false)
+  hasLocalization  Boolean @default(false)
+  hasWhiteLabel    Boolean @default(false)
+  supportLevel     String  @default("community") // community, email, priority, dedicated
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   subscriptions Subscription[]
 }
 
 model Subscription {
-  id                String             @id @default(cuid())
-  userId            String
-  planId            String
-  status            SubscriptionStatus @default(TRIALING)
-  
+  id     String             @id @default(cuid())
+  userId String
+  planId String
+  status SubscriptionStatus @default(TRIALING)
+
   // Billing
-  stripeCustomerId        String? @unique
-  stripeSubscriptionId    String? @unique
-  stripePriceId           String?
-  
+  stripeCustomerId     String? @unique
+  stripeSubscriptionId String? @unique
+  stripePriceId        String?
+
   // Lifecycle
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
-  cancelAtPeriodEnd  Boolean  @default(false)
+  cancelAtPeriodEnd  Boolean   @default(false)
   canceledAt         DateTime?
   trialStart         DateTime?
   trialEnd           DateTime?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Relations
-  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan  Plan @relation(fields: [planId], references: [id])
+  user  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan  Plan    @relation(fields: [planId], references: [id])
   usage Usage[]
-  
+
   @@index([userId])
   @@index([planId])
   @@index([status])
 }
 
 model Usage {
-  id               String   @id @default(cuid())
+  id             String @id @default(cuid())
   subscriptionId String
-  
+
   // Usage Metrics
-  personalProjectsCount     Int @default(0)
-  organizationsCount        Int @default(0)
-  orgProjectsCount          Int @default(0)
-  apiCallsMonth             Int @default(0)
-  mediaStorageUsedMB        Int @default(0)
-  
+  personalProjectsCount Int @default(0)
+  organizationsCount    Int @default(0)
+  orgProjectsCount      Int @default(0)
+  apiCallsMonth         Int @default(0)
+  mediaStorageUsedMB    Int @default(0)
+
   // Period tracking
   periodStart DateTime
   periodEnd   DateTime
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  
+
   @@index([subscriptionId])
   @@index([periodStart, periodEnd])
 }
 
 model Invoice {
-  id                String   @id @default(cuid())
-  userId            String
-  subscriptionId    String?
-  
-  amount            Int      // Amount in cents
-  currency          String   @default("USD")
-  status            String   // paid, pending, failed
-  
-  stripeInvoiceId   String?  @unique
-  invoiceNumber     String?
-  invoiceUrl        String?
-  
-  paidAt            DateTime?
-  createdAt         DateTime @default(now())
-  
+  id             String  @id @default(cuid())
+  userId         String
+  subscriptionId String?
+
+  amount   Int // Amount in cents
+  currency String @default("USD")
+  status   String // paid, pending, failed
+
+  stripeInvoiceId String? @unique
+  invoiceNumber   String?
+  invoiceUrl      String?
+
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
   user User @relation(fields: [userId], references: [id])
-  
+
   @@index([userId])
   @@index([status])
 }
@@ -241,8 +242,8 @@ model Organization {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  owner   User                  @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members OrganizationMember[]
+  owner    User                 @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members  OrganizationMember[]
   projects Project[]
 
   @@index([ownerId])
@@ -285,15 +286,16 @@ model Project {
   updatedAt DateTime @updatedAt
 
   // Relations
-  owner          User                  @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  members        ProjectMember[]
-  
+  owner        User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  organization Organization?   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      ProjectMember[]
+
   // CMS Features
   builderContentTypes BuilderContentType[]
   apiTokens           ApiToken[]
   workflows           Workflow[]
   roles               Role[] // Custom roles defined within this project
+  ActivityLog         ActivityLog[]
 
   @@unique([organizationId, slug])
   @@index([ownerId])
@@ -325,23 +327,23 @@ model ProjectMember {
 // ============================================================================
 
 model Role {
-  id          String   @id @default(cuid())
-  name        String   // Super Admin, Admin, Editor, etc
+  id          String  @id @default(cuid())
+  name        String // Super Admin, Admin, Editor, etc
   slug        String
   description String?
   color       String?
-  isSystem    Boolean  @default(false)
-  
-  projectId   String?  // null = global system role, filled = project specific role
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isSystem    Boolean @default(false)
+
+  projectId String? // null = global system role, filled = project specific role
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   permissions RolePermission[]
   members     ProjectMember[]
-  
+
   // Role ini bisa ditugaskan di langkah workflow
   assignedWorkflowSteps WorkflowStep[]
 
@@ -352,7 +354,7 @@ model Role {
 model RolePermission {
   id        String  @id @default(cuid())
   roleId    String
-  module    String  // content, media, seo, settings, etc
+  module    String // content, media, seo, settings, etc
   canCreate Boolean @default(false)
   canRead   Boolean @default(false)
   canUpdate Boolean @default(false)
@@ -370,23 +372,23 @@ model RolePermission {
 // ============================================================================
 
 model ApiToken {
-  id          String    @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
-  token       String    @unique // Hashed or plain token (e.g., "wf_sk_...")
-  
+  token       String  @unique // Hashed or plain token (e.g., "wf_sk_...")
+
   // Permissions stored as JSON (e.g. ["read", "create", "delete"])
-  permissions Json      @default("[]") 
-  scope       String    @default("Custom") // "Full Access", "Read Only", "Custom"
-  
-  expiresAt   DateTime? // Jika null = Forever
-  lastUsedAt  DateTime?
-  
-  projectId   String
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  permissions Json   @default("[]")
+  scope       String @default("Custom") // "Full Access", "Read Only", "Custom"
+
+  expiresAt  DateTime? // Jika null = Forever
+  lastUsedAt DateTime?
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
 }
@@ -396,38 +398,38 @@ model ApiToken {
 // ============================================================================
 
 model Workflow {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   description String?
-  isActive    Boolean  @default(true)
-  
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+  isActive    Boolean @default(true)
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   // Steps/Tahapan (e.g. Draft -> Editor Review -> Legal Review -> Publish)
-  steps       WorkflowStep[]
-  
+  steps WorkflowStep[]
+
   // Tipe Konten yang menggunakan workflow ini
   appliedContentTypes BuilderContentType[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
 }
 
 model WorkflowStep {
-  id          String   @id @default(cuid())
-  name        String   // e.g. "Editor Review"
-  order       Int      // Urutan: 1, 2, 3
-  
+  id    String @id @default(cuid())
+  name  String // e.g. "Editor Review"
+  order Int // Urutan: 1, 2, 3
+
   // Siapa yang boleh approve di tahap ini? (Berdasarkan Role)
-  roleId      String?
-  role        Role?    @relation(fields: [roleId], references: [id])
-  
-  workflowId  String
-  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  
+  roleId String?
+  role   Role?   @relation(fields: [roleId], references: [id])
+
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
   // Relasi ke konten yang sedang "stuck" di step ini
   currentContents ContentEntry[]
 
@@ -443,7 +445,7 @@ model BuilderContentType {
   id          String  @id @default(cuid())
   name        String
   slug        String
-  type        String  // "SINGLE", "COLLECTION", "COMPONENT"
+  type        String // "SINGLE", "COLLECTION", "COMPONENT"
   description String?
 
   hasSeo       Boolean @default(false)
@@ -459,7 +461,7 @@ model BuilderContentType {
 
   // Pengelompokan field
   fieldGroups BuilderFieldGroup[]
-  
+
   // Relasi ke Data Konten (Isi)
   contentEntries ContentEntry[]
 
@@ -467,10 +469,10 @@ model BuilderContentType {
   updatedAt DateTime @updatedAt
 
   // Many-to-Many: Page uses multiple Components, Component used in multiple Pages
-  usedComponents     BuilderContentType[] @relation("PageComponents")
-  usedInPages        BuilderContentType[] @relation("PageComponents")
+  usedComponents BuilderContentType[] @relation("PageComponents")
+  usedInPages    BuilderContentType[] @relation("PageComponents")
 
-  sectionsOrder      Json?     // Stores the order of interleaved FieldGroups and Components
+  sectionsOrder Json? // Stores the order of interleaved FieldGroups and Components
 
   @@unique([projectId, slug])
   @@index([projectId])
@@ -478,9 +480,9 @@ model BuilderContentType {
 }
 
 model BuilderFieldGroup {
-  id            String @id @default(cuid())
-  name          String
-  order         Int    @default(0)
+  id    String @id @default(cuid())
+  name  String
+  order Int    @default(0)
 
   contentTypeId String
   contentType   BuilderContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
@@ -491,10 +493,10 @@ model BuilderFieldGroup {
 }
 
 model BuilderField {
-  id       String @id @default(cuid())
-  name     String // Label: "Hero Title"
-  apiId    String // API Key: "hero_title"
-  type     String // text, media, relation, etc
+  id    String @id @default(cuid())
+  name  String // Label: "Hero Title"
+  apiId String // API Key: "hero_title"
+  type  String // text, media, relation, etc
 
   // Validasi
   isRequired Boolean @default(false)
@@ -519,34 +521,34 @@ model BuilderField {
 // ============================================================================
 
 model ContentEntry {
-  id            String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Data utama disimpan sebagai JSON dinamis
-  data          Json     @default("{}")
-  
+  data Json @default("{}")
+
   // Data SEO terpisah
-  seoData       Json?    @default("{}")
-  
+  seoData Json? @default("{}")
+
   // Status Publikasi
-  status        String   @default("DRAFT") // DRAFT, IN_REVIEW, APPROVED, PUBLISHED, ARCHIVED, REJECTED
-  
+  status String @default("DRAFT") // DRAFT, IN_REVIEW, APPROVED, PUBLISHED, ARCHIVED, REJECTED
+
   // WORKFLOW STATE (Posisi konten saat ini ada di step mana)
-  currentStepId String? 
+  currentStepId String?
   currentStep   WorkflowStep? @relation(fields: [currentStepId], references: [id])
-  
+
   // Relasi ke Struktur Builder
   contentTypeId String
   contentType   BuilderContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
 
   // Relasi ke Penulis (User)
-  createdById   String?
-  createdBy     User?    @relation(fields: [createdById], references: [id])
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
 
   // Riwayat Approval/Log
-  workflowLogs  ContentWorkflowLog[]
+  workflowLogs ContentWorkflowLog[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([contentTypeId])
   @@index([createdById])
@@ -555,20 +557,48 @@ model ContentEntry {
 
 // Log History (Siapa approve, kapan, komentar apa)
 model ContentWorkflowLog {
-  id             String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   contentEntryId String
   contentEntry   ContentEntry @relation(fields: [contentEntryId], references: [id], onDelete: Cascade)
-  
-  actorId        String   // User yang melakukan aksi
-  actor          User     @relation(fields: [actorId], references: [id])
-  
-  action         String   // "SUBMIT", "APPROVE", "REJECT", "PUBLISH"
-  stepName       String?  // Nama step saat aksi dilakukan (snapshot)
-  comment        String?  // Alasan reject/approve
-  
-  createdAt      DateTime @default(now())
+
+  actorId String // User yang melakukan aksi
+  actor   User   @relation(fields: [actorId], references: [id])
+
+  action   String // "SUBMIT", "APPROVE", "REJECT", "PUBLISH"
+  stepName String? // Nama step saat aksi dilakukan (snapshot)
+  comment  String? // Alasan reject/approve
+
+  createdAt DateTime @default(now())
 
   @@index([contentEntryId])
   @@index([actorId])
+}
+
+model ActivityLog {
+  id String @id @default(cuid())
+
+  // Relasi ke User (Siapa yang melakukan aksi)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Detail Aksi
+  action     String // Contoh: "CREATE_WORKFLOW"
+  entityType String // Contoh: "Workflow", "ApiToken"
+  entityId   String? // ID dari objek yang diubah
+  entityName String? // Nama objek (untuk display log)
+
+  // Metadata tambahan
+  details   Json? // Simpan info detail lain dalam JSON
+  ipAddress String?
+  userAgent String?
+
+  // Relasi ke Project
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([userId])
 }

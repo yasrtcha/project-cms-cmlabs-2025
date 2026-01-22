@@ -1,7 +1,7 @@
 "use client";
 
-import { createApiToken } from "@/app/builder/_actions/settings-actions"; // Import fungsi tadi
-import { useState } from "react";
+import { createApiToken } from "@/app/builder/_actions/settings-actions"; 
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation"; 
 import { 
   ArrowLeft, 
@@ -18,7 +18,7 @@ export default function CreateApiTokenPage() {
   const params = useParams(); 
   const [isLoading, setIsLoading] = useState(false);
 
-  // URL Halaman List (Untuk tombol Back & Redirect Save)
+  // URL Halaman List
   const backUrl = `/builder/${params.projectId}/settings/api-integration`;
 
   // --- FORM STATE ---
@@ -26,7 +26,7 @@ export default function CreateApiTokenPage() {
     name: "",
     description: "",
     validity: "7 Days",
-    scope: "Custom",
+    scope: "Custom", // Default Custom agar checkbox bisa diklik
   });
 
   // --- PERMISSION STATE ---
@@ -34,12 +34,34 @@ export default function CreateApiTokenPage() {
     create: true,
     delete: true,
     update: true,
-    find: false,
-    findOne: false,
+    find: true,
+    findOne: true,
   });
+
+  // State untuk mengunci checkbox (jika Full Access / Read Only)
+  const [isPermissionLocked, setIsPermissionLocked] = useState(false);
+
+  // --- EFFECT: Handle Scope Change ---
+  useEffect(() => {
+    if (formData.scope === "Full Access") {
+      setPermissions({
+        create: true, delete: true, update: true, find: true, findOne: true
+      });
+      setIsPermissionLocked(true);
+    } else if (formData.scope === "Read Only") {
+      setPermissions({
+        create: false, delete: false, update: false, find: true, findOne: true
+      });
+      setIsPermissionLocked(true);
+    } else {
+      // Custom: Buka kunci, biarkan user memilih
+      setIsPermissionLocked(false);
+    }
+  }, [formData.scope]);
 
   // --- HANDLERS ---
   const handleSelectAll = () => {
+    if (isPermissionLocked) return;
     const allSelected = Object.values(permissions).every(Boolean);
     const newState = !allSelected;
     
@@ -53,6 +75,7 @@ export default function CreateApiTokenPage() {
   };
 
   const togglePermission = (key: keyof typeof permissions) => {
+    if (isPermissionLocked) return;
     setPermissions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -71,20 +94,20 @@ export default function CreateApiTokenPage() {
         description: formData.description,
         validity: formData.validity,
         scope: formData.scope,
-        permissions: permissions // Kirim object boolean permission
+        permissions: permissions // Kirim object permissions
     };
 
     // 3. Panggil Server Action
-    // params.projectId harus string (pastikan type aman)
+    // Pastikan params.projectId selalu string
+    const projectIdString = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+    
     const result = await createApiToken(params.projectId as string, payload);
-
     setIsLoading(false);
 
     if (result.success) {
-        // Redirect jika sukses
         router.push(backUrl);
     } else {
-        alert("Error: " + result.error);
+        alert("Error creating token: " + (result.error || "Unknown error"));
     }
   };
 
@@ -94,7 +117,6 @@ export default function CreateApiTokenPage() {
       {/* === HEADER === */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-100 dark:border-slate-800 pb-6">
         <div className="space-y-1">
-          {/* Tombol Back Pindah Halaman */}
           <button 
             onClick={() => router.push(backUrl)}
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#3B82F6] dark:text-slate-400 dark:hover:text-[#3B82F6] transition-colors mb-2 group font-medium"
@@ -104,7 +126,7 @@ export default function CreateApiTokenPage() {
           </button>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Create a New API Token</h1>
           <p className="text-sm text-gray-500 dark:text-slate-400">
-            Optimize your API and Integration management
+            Generate tokens to authenticate your applications securely.
           </p>
         </div>
 
@@ -136,7 +158,7 @@ export default function CreateApiTokenPage() {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              placeholder="e.g. Custom Token"
+              placeholder="e.g. Website Production Key"
               className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1e293b] border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] transition-all text-gray-900 dark:text-white placeholder:text-gray-400"
             />
           </div>
@@ -150,7 +172,7 @@ export default function CreateApiTokenPage() {
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
-              placeholder="Tokens that can only be CUD"
+              placeholder="Used for fetching blog posts..."
               className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1e293b] border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] transition-all text-gray-900 dark:text-white placeholder:text-gray-400"
             />
           </div>
@@ -174,7 +196,7 @@ export default function CreateApiTokenPage() {
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
             </div>
             <p className="text-[11px] text-gray-400 dark:text-slate-500 leading-tight pt-1">
-              If the Validity Period has passed, the API will be immediately deleted.
+              Token will automatically expire after this period.
             </p>
           </div>
 
@@ -203,24 +225,26 @@ export default function CreateApiTokenPage() {
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">Access Permission</h3>
           
-          {/* Card Container */}
           <div className="rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden shadow-sm">
             
-            {/* Card Header (Blue) */}
+            {/* Card Header */}
             <div className="bg-[#3B82F6] px-6 py-3 flex justify-between items-center text-white">
               <h4 className="font-semibold text-sm">Customizable Content Models and Schema</h4>
-              <button 
-                onClick={handleSelectAll}
-                className="flex items-center gap-2 text-xs font-medium bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-md transition-colors"
-              >
-                {/* Logic Icon */}
-                {Object.values(permissions).every(Boolean) ? <CheckSquare size={16} /> : <Square size={16} />}
-                Select All
-              </button>
+              
+              {/* Select All hanya muncul jika Custom */}
+              {!isPermissionLocked && (
+                <button 
+                  onClick={handleSelectAll}
+                  className="flex items-center gap-2 text-xs font-medium bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-md transition-colors"
+                >
+                  {Object.values(permissions).every(Boolean) ? <CheckSquare size={16} /> : <Square size={16} />}
+                  Select All
+                </button>
+              )}
             </div>
 
-            {/* Card Body (Checkboxes Grid) */}
-            <div className="p-6 bg-white dark:bg-[#1e293b]">
+            {/* Card Body */}
+            <div className={cn("p-6 bg-white dark:bg-[#1e293b]", isPermissionLocked && "opacity-70 pointer-events-none")}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8">
                 
                 <PermissionCheckbox 
@@ -252,6 +276,11 @@ export default function CreateApiTokenPage() {
               </div>
             </div>
           </div>
+          {isPermissionLocked && (
+            <p className="text-xs text-orange-500 italic">
+              *Permissions are locked because "{formData.scope}" scope is selected. Switch to "Custom" to edit.
+            </p>
+          )}
         </div>
 
       </div>

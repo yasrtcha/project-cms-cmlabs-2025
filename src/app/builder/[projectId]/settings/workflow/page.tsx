@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getWorkflows } from "@/app/builder/_actions/settings-actions"; // Import Action
+import { getWorkflows, deleteWorkflow } from "@/app/builder/_actions/settings-actions"; // Import deleteWorkflow
 import { 
   Plus, 
   Pencil, 
@@ -9,11 +9,19 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { DeleteWorkflowButton } from "./delete-button";
+import { revalidatePath } from "next/cache";
+import SafeDeleteButton from "@/components/safe-delete-button"; // Import Tombol Aman
 
 export default async function WorkflowPage({ params }: { params: { projectId: string } }) {
   // 1. Ambil data asli dari Database
   const { data: workflows } = await getWorkflows(params.projectId);
+
+  // Wrapper untuk delete action
+  async function handleDelete(id: string) {
+    "use server";
+    await deleteWorkflow(params.projectId, id);
+    revalidatePath(`/builder/${params.projectId}/settings/workflow`);
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8 min-h-screen bg-white dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 transition-colors duration-300">
@@ -83,7 +91,6 @@ export default async function WorkflowPage({ params }: { params: { projectId: st
                       )}
                     </td>
                     <td className="px-6 py-4 text-center text-gray-600 dark:text-slate-300 align-middle">
-                      {/* Menghitung jumlah Steps dari DB */}
                       {workflow.steps ? workflow.steps.length : 0} Stages
                     </td>
                     <td className="px-6 py-4 text-center align-middle">
@@ -102,10 +109,13 @@ export default async function WorkflowPage({ params }: { params: { projectId: st
                     </td>
                     <td className="px-6 py-4 align-middle">
                       <div className="flex items-center justify-center gap-3">
-                        {/* Tombol Delete Client Component */}
-                        <DeleteWorkflowButton 
-                            projectId={params.projectId} 
-                            workflowId={workflow.id} 
+                        
+                        {/* Tombol Safe Delete */}
+                        <SafeDeleteButton 
+                            id={workflow.id}
+                            onDelete={handleDelete}
+                            title={`Delete Workflow "${workflow.name}"?`}
+                            warningMessage="This will remove the approval process from any connected content types. They will revert to direct publishing."
                         />
                         
                         <button 

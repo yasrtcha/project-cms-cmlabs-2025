@@ -2,9 +2,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { getContentEntries, deleteContentEntry } from "@/app/builder/_actions/content-entry-actions";
-import { Plus, Edit, Trash2, FileText, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Edit, FileText, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { revalidatePath } from "next/cache";
 import { cn } from "@/lib/utils";
+import SafeDeleteButton from "@/components/safe-delete-button"; // Import Tombol Aman
 
 export default async function CollectionListPage({
   params,
@@ -36,10 +37,10 @@ export default async function CollectionListPage({
     return data.title || data.name || data.label || data.headline || Object.values(data)[0] || "Untitled Entry";
   };
 
-  // Server Action kecil untuk handle delete
-  async function deleteAction(formData: FormData) {
+  // --- ACTION WRAPPER UNTUK DELETE ---
+  // Fungsi ini akan dipanggil oleh SafeDeleteButton
+  async function handleDelete(id: string) {
     "use server";
-    const id = formData.get("id") as string;
     await deleteContentEntry(id);
     revalidatePath(`/builder/${projectId}/content-management/collection/${pageId}`);
   }
@@ -130,17 +131,14 @@ export default async function CollectionListPage({
                               <Edit size={18} />
                             </Link>
 
-                            <form action={deleteAction}>
-                              <input type="hidden" name="id" value={entry.id} />
-                              <button
-                                type="submit"
-                                className="w-10 h-10 flex items-center justify-center text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl hover:scale-110 transition-all border border-red-100 dark:border-red-800/50 cursor-pointer"
-                                title="Delete Entry"
-                                onClick={(e) => { if (!confirm("Delete this entry?")) e.preventDefault(); }}
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </form>
+                            {/* --- INTEGRASI SAFE DELETE BUTTON DI SINI --- */}
+                            <SafeDeleteButton 
+                              id={entry.id}
+                              onDelete={handleDelete}
+                              title={`Delete "${String(getDisplayTitle(entry.data))}"?`}
+                              warningMessage="Are you sure? This action cannot be undone and will permanently remove this content entry."
+                            />
+                            
                           </div>
                         </td>
                       </tr>

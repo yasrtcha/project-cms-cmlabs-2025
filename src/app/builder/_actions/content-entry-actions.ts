@@ -3,15 +3,13 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
-// 1. Ambil SATU Entry (Untuk Edit Form)
+// 1. Ambil SATU Entry
 export async function getContentEntry(entryId: string) {
   try {
-    // Coba cari langsung berdasarkan ID
     let entry = await prisma.contentEntry.findUnique({
       where: { id: entryId }
     });
 
-    // Jika tidak ketemu, coba cari berdasarkan contentTypeId (Biasanya untuk Single Page)
     if (!entry) {
       entry = await prisma.contentEntry.findFirst({
         where: { contentTypeId: entryId },
@@ -25,7 +23,7 @@ export async function getContentEntry(entryId: string) {
   }
 }
 
-// 2. Ambil BANYAK Entry (Untuk Tabel List) - Mendukung Pagination
+// 2. Ambil BANYAK Entry
 export async function getContentEntries(contentTypeId: string, page: number = 1, limit: number = 10) {
   try {
     const skip = (page - 1) * limit;
@@ -57,13 +55,13 @@ export async function getContentEntries(contentTypeId: string, page: number = 1,
   }
 }
 
-// 3. Simpan Data Konten (Create / Update)
+// 3. Simpan Data Konten (DENGAN VALIDASI & WORKFLOW LOGIC)
 export async function saveContentEntry({
   contentTypeId,
-  entryId, // Tambahan: ID entry (opsional jika create baru)
+  entryId,
   data,
   seoData,
-  status = "PUBLISHED"
+  status
 }: {
   contentTypeId: string,
   entryId?: string,
@@ -72,50 +70,94 @@ export async function saveContentEntry({
   status?: string
 }) {
   try {
-    // Cek tipe konten dulu (Single atau Collection)
+    // A. Fetch Schema untuk Validasi
     const contentType = await prisma.builderContentType.findUnique({
-      where: { id: contentTypeId }
+      where: { id: contentTypeId },
+      include: { 
+        fieldGroups: { include: { fields: true } },
+        workflow: { include: { steps: { orderBy: { order: 'asc' } } } } 
+      }
     });
 
     if (!contentType) throw new Error("Content Type not found");
 
-    if (contentType.type === "SINGLE") {
-      // LOGIKA SINGLE PAGE (Upsert: Update if exists, Create if not)
-      const existing = await prisma.contentEntry.findFirst({
-        where: { contentTypeId }
-      });
+    // B. VALIDASI DATA WAJIB (Required Fields)
+    // Kita kumpulkan semua field dari semua group
+    const requiredFields = contentType.fieldGroups.flatMap(g => g.fields).filter(f => f.isRequired);
+    
+    for (const field of requiredFields) {
+        const val = data[field.apiId];
+        // Cek jika null, undefined, atau string kosong
+        if (val === null || val === undefined || (typeof val === 'string' && val.trim() === '')) {
+            return { success: false, error: `Field "${field.name}" is required.` };
+        }
+    }
 
-      if (existing) {
-        await prisma.contentEntry.update({
-          where: { id: existing.id },
-          data: { data, seoData, status }
-        });
-      } else {
-        await prisma.contentEntry.create({
-          data: { contentTypeId, data, seoData, status }
-        });
-      }
+    // C. LOGIKA WORKFLOW (Status Otomatis)
+    let finalStatus = status;
+    let currentStepId = undefined;
+
+    // Jika user tidak mengirim status spesifik (misal dari tombol Save biasa), kita tentukan:
+    if (!finalStatus || finalStatus === "PUBLISHED") {
+        if (contentType.hasWorkflow && contentType.workflow && contentType.workflow.isActive) {
+            // JIKA ADA WORKFLOW -> Paksa jadi DRAFT / IN_REVIEW
+            finalStatus = "DRAFT"; 
+            
+            // Set ke step pertama workflow jika konten baru
+            if ((!entryId || entryId === "new") && contentType.workflow.steps.length > 0) {
+                currentStepId = contentType.workflow.steps[0].id;
+            }
+        } else {
+            // JIKA TIDAK ADA WORKFLOW -> Boleh Langsung Publish
+            finalStatus = "PUBLISHED";
+        }
+    }
+
+    // D. Simpan ke Database
+    // Kita dukung SINGLE page dan COMPONENT sebagai data tunggal (Singleton)
+    if (contentType.type === "SINGLE" || contentType.type === "COMPONENT") {
+       const existing = await prisma.contentEntry.findFirst({ where: { contentTypeId } });
+       
+       if (existing) {
+          await prisma.contentEntry.update({
+             where: { id: existing.id },
+             data: { 
+                data, 
+                seoData, 
+                status: finalStatus, 
+                // Jika konten di-reset ke DRAFT (misal diedit ulang), kita mungkin mau reset step juga
+                ...(currentStepId ? { currentStepId } : {}) 
+             }
+          });
+       } else {
+          await prisma.contentEntry.create({
+             data: { contentTypeId, data, seoData, status: finalStatus, currentStepId }
+          });
+       }
     } else {
-      // LOGIKA MULTIPLE PAGE (Collection)
-      if (entryId && entryId !== "new") {
-        // Update Existing Item
-        await prisma.contentEntry.update({
-          where: { id: entryId },
-          data: { data, seoData, status }
-        });
-      } else {
-        // Create New Item
-        await prisma.contentEntry.create({
-          data: { contentTypeId, data, seoData, status }
-        });
-      }
+       // COLLECTION (Multiple Entries)
+       if (entryId && entryId !== "new") {
+          await prisma.contentEntry.update({
+             where: { id: entryId },
+             data: { 
+                data, 
+                seoData, 
+                status: finalStatus 
+                // Edit existing biasanya tidak mereset workflow step, kecuali diminta
+             }
+          });
+       } else {
+          await prisma.contentEntry.create({
+             data: { contentTypeId, data, seoData, status: finalStatus, currentStepId }
+          });
+       }
     }
 
     revalidatePath(`/builder`);
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Save Error:", error);
-    return { success: false, error: "Failed to save content" };
+    return { success: false, error: error.message || "Failed to save content" };
   }
 }
 
@@ -132,44 +174,40 @@ export async function deleteContentEntry(entryId: string) {
   }
 }
 
-// 5. Ambil Opsi Relasi
-export async function getRelationOptions(targetContentTypeId: string) {
+// 5. Ambil Opsi Relasi (DENGAN PENCARIAN ASYNC)
+export async function getRelationOptions(targetContentTypeId: string, query: string = "") {
   try {
+    // Kita ambil data agak banyak (50) agar pencarian terasa responsif
     const entries = await prisma.contentEntry.findMany({
-      where: { contentTypeId: targetContentTypeId },
+      where: { 
+        contentTypeId: targetContentTypeId,
+        // Di aplikasi produksi, pencarian JSON dilakukan di level DB. 
+        // Di sini kita fetch lalu filter di memori untuk simplisitas Skripsi.
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 50, // Batasi 50 data saja agar ringan
       select: { id: true, data: true }
     });
 
+    // Mapping data menjadi { value, label }
     const options = entries.map(entry => {
       const entryData = entry.data as any;
-      // Coba tebak field mana yang jadi label (Name, Title, atau field pertama)
-      const label = entryData.name || entryData.title || entryData.label || Object.values(entryData)[0] || "Untitled";
+      // Deteksi otomatis label (Name/Title/Headline)
+      const label = entryData.name || entryData.title || entryData.label || entryData.headline || Object.values(entryData)[0] || "Untitled";
       return { value: entry.id, label: String(label) };
     });
+
+    // Filter berdasarkan query pencarian
+    if (query) {
+      const lowerQuery = query.toLowerCase();
+      return { 
+        success: true, 
+        data: options.filter(opt => opt.label.toLowerCase().includes(lowerQuery)) 
+      };
+    }
 
     return { success: true, data: options };
   } catch (error) {
     return { success: false, data: [] };
   }
 }
-// 6. Ambil SEMUA Entry dari Content Type bertipe COMPONENT (Untuk Layout/Global)
-export async function getGlobalComponentEntries(projectId: string) {
-  try {
-    const entries = await prisma.contentEntry.findMany({
-      where: {
-        contentType: {
-          projectId,
-          type: "COMPONENT"
-        }
-      },
-      include: {
-        contentType: true
-      }
-    });
-    return { success: true, data: entries };
-  } catch (error) {
-    console.error("Fetch Global Components Error:", error);
-    return { success: false, data: [] };
-  }
-}
-
