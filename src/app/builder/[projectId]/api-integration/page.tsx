@@ -9,6 +9,7 @@ import {
   Globe,
   ChevronRight,
 } from "lucide-react";
+import SafeDeleteButton from "@/components/safe-delete-button";
 
 export default async function ApiIntegrationPage({
   params,
@@ -132,9 +133,14 @@ export default async function ApiIntegrationPage({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <DeleteTokenButton
-                        tokenId={token.id}
-                        projectId={projectId}
+                      <SafeDeleteButton
+                        id={token.id}
+                        onDelete={async (id: string) => {
+                          "use server";
+                          await prisma.apiToken.delete({ where: { id } });
+                        }}
+                        title={`Delete Token "${token.name}"?`}
+                        warningMessage="This action cannot be undone."
                       />
                     </td>
                   </tr>
