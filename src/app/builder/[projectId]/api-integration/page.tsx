@@ -196,6 +196,5 @@ export default async function ApiIntegrationPage({
       </div>
 
     </div>
-    </div >
   );
 }
