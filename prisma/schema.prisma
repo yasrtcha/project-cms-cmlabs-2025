@@ -370,12 +370,17 @@ model RolePermission {
 // ============================================================================
 // 5. API INTEGRATION (NEW FEATURE)
 // ============================================================================
+enum ApiTokenRole {
+  full_access
+  read_only
+}
 
 model ApiToken {
   id          String  @id @default(cuid())
   name        String
   description String?
   token       String  @unique // Hashed or plain token (e.g., "wf_sk_...")
+  role        ApiTokenRole
 
   // Permissions stored as JSON (e.g. ["read", "create", "delete"])
   permissions Json   @default("[]")
