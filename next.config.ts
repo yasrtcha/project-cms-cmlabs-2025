@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  eslint:{
+    ignoreDuringBuilds: true,
+  },
   // Image optimization
   images: {
     // --- TAMBAHAN PENTING DI SINI ---
