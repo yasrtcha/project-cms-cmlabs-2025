@@ -1,5 +1,5 @@
 'use server'
-
+import { ApiTokenRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import crypto from "crypto"
@@ -11,7 +11,7 @@ function generateToken() {
 export async function createApiToken(data: {
   name: string;
   description?: string;
-  role: string; // 'public', 'read_write', 'full'
+  role: ApiTokenRole; // 'public', 'read_write', 'full'
   expiresIn?: string; // '7days', '30days', 'never'
   projectId: string;
 }) {
