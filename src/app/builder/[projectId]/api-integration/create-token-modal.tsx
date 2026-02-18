@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, Loader2, Key, Calendar, Shield } from "lucide-react";
 import { createApiToken } from "@/app/builder/_actions/api-token-actions";
+import { ApiTokenRole } from "@prisma/client";
 
 export function CreateTokenModal({ 
   isOpen, 
@@ -19,8 +20,8 @@ export function CreateTokenModal({
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    role: "read_write", // Default
-    expiresIn: "never"  // Default
+    role: "read_only" as "read_only" | "full_access",
+    expiresIn: "never",
   });
 
   if (!isOpen) return null;
@@ -30,8 +31,11 @@ export function CreateTokenModal({
     
     setIsLoading(true);
     const result = await createApiToken({
-      ...formData,
-      projectId
+      name: formData.name,
+      description: formData.description,
+      role: formData.role as ApiTokenRole,
+      expiresIn: formData.expiresIn,
+      projectId,
     });
 
     setIsLoading(false);
@@ -39,7 +43,7 @@ export function CreateTokenModal({
     if (result.success && result.token) {
       onSuccess(result.token); // Kirim token ke parent untuk ditampilkan
       onClose();
-      setFormData({ name: "", description: "", role: "read_write", expiresIn: "never" }); // Reset
+      setFormData({ name: "", description: "", role: "read_only", expiresIn: "never" }); // Reset
     } else {
       alert("Failed to create token");
     }
@@ -95,7 +99,7 @@ export function CreateTokenModal({
                   <select 
                     className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none"
                     value={formData.role}
-                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                    onChange={(e) => setFormData({...formData, role: e.target.value as ApiTokenRole})}
                   >
                     <option value="read_only">Read Only</option>
                     <option value="read_write">Read & Write</option>
