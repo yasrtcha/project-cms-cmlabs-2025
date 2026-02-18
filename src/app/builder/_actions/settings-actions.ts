@@ -48,6 +48,7 @@ export async function createApiToken(projectId: string, formData: {
           name: formData.name,
           description: formData.description,
           token: secretToken,
+          role: "read_only",
           scope: formData.scope,
           permissions: formData.permissions,
           expiresAt: expiresAt,
